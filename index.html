@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -219,6 +219,105 @@
       grid-template-columns: 1fr 1fr;
       gap: 0.65rem;
       margin-bottom: 1.15rem;
+    }
+
+    .summary-strip-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 1.05rem;
+    }
+
+    .summary-strip-3 .summary-col {
+      padding: 0.65rem 0.45rem;
+    }
+
+    .summary-strip-3 .summary-col .lbl {
+      font-size: 0.68rem;
+    }
+
+    .summary-strip-3 .summary-col .val {
+      font-size: 0.96rem;
+    }
+
+    .rubro-metrics-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      font-size: 0.72rem;
+      margin-top: 0.25rem;
+      color: var(--text-secondary);
+    }
+
+    .rubro-metric-pill {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.14rem 0.42rem;
+      border-radius: 6px;
+    }
+
+    .day-col {
+      flex: 1;
+      min-width: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+      cursor: pointer;
+      padding: 0 1px;
+    }
+
+    .day-bar {
+      width: 100%;
+      background: var(--blue);
+      border-radius: 4px 4px 0 0;
+      min-height: 3px;
+      transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .day-bar.over-avg {
+      background: var(--orange);
+    }
+
+    .day-col.active-day .day-bar {
+      background: #ffffff !important;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
+      transform: scaleX(1.18);
+      opacity: 1 !important;
+    }
+
+    .day-col.active-day .day-label {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .daily-detail-box {
+      margin-top: 0.85rem;
+      padding: 0.8rem 0.9rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(10, 132, 255, 0.28);
+      font-size: 0.82rem;
+    }
+
+    .daily-detail-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+
+    .daily-detail-rubro {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.28rem 0;
+      border-top: 1px dashed rgba(255, 255, 255, 0.08);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      gap: 0.5rem;
     }
 
     .summary-col {
@@ -814,16 +913,21 @@
 
     <!-- VIEW 3: RUBROS Y SEGMENTOS (Monthly Budgets) -->
     <div id="view-rubros" class="view-section">
-      <div class="summary-strip">
-        <div class="summary-col editable" onclick="openMonthlyBudgetModal()" title="Toca para modificar lo disponible de este mes">
-          <div class="lbl">Disponible del Mes ✏️</div>
-          <div class="val" id="rubrosRemaining">$0</div>
-          <div class="sub-hint" id="monthlyBaseLabel">De $0 (Toca para editar)</div>
+      <div class="summary-strip-3">
+        <div class="summary-col editable" onclick="openMonthlyBudgetModal()" title="Toca para modificar lo presupuestado del mes">
+          <div class="lbl">Presupuestado ✏️</div>
+          <div class="val" id="rubrosBudgetTotal">$0</div>
+          <div class="sub-hint" id="rubrosCount">0 rubros</div>
         </div>
-        <div class="summary-col editable" onclick="openNewRubroModal()">
-          <div class="lbl">Suma de Rubros</div>
-          <div class="val" id="rubrosSumVal">$0</div>
-          <div class="sub-hint" id="rubrosCount">0 rubros (+ Nuevo)</div>
+        <div class="summary-col">
+          <div class="lbl">Gastado</div>
+          <div class="val" id="rubrosSpentTotal" style="color:var(--blue);">$0</div>
+          <div class="sub-hint" id="rubrosPctHint" style="color:var(--text-secondary);">0% usado</div>
+        </div>
+        <div class="summary-col">
+          <div class="lbl">Diferencia</div>
+          <div class="val" id="rubrosRemaining">$0</div>
+          <div class="sub-hint" id="rubrosDiffHint" style="color:var(--green);">Falta para meta</div>
         </div>
       </div>
 
@@ -869,7 +973,13 @@
           <span>Ritmo Día a Día</span>
           <span class="sub" id="dailyAvgLabel">Promedio: $0/día</span>
         </div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:0.35rem;">
+          👆 Toca o desliza el dedo sobre cualquier barra para ver cuánto gastaron ese día y en qué rubros
+        </div>
         <div class="daily-chart" id="dailyChart"></div>
+        <div class="daily-detail-box" id="dailyTooltipBox">
+          <div class="tc-sub" style="text-align:center;">Toca o pasa el dedo sobre una barra para ver el detalle del día.</div>
+        </div>
       </div>
 
       <div class="group-header">
@@ -902,11 +1012,11 @@
     </button>
   </div>
 
-  <!-- MODAL 1: ADD EXPENSE -->
+  <!-- MODAL 1: ADD / EDIT EXPENSE -->
   <div class="modal-backdrop" id="expenseModal">
     <div class="modal-sheet">
       <div class="sheet-header">
-        <h3>Nuevo Gasto</h3>
+        <h3 id="expenseModalTitle">Nuevo Gasto</h3>
         <button class="sheet-close" onclick="closeModals()">✕</button>
       </div>
 
@@ -917,6 +1027,7 @@
       </div>
 
       <form id="expenseForm">
+        <input type="hidden" id="expEditId" value="" />
         <div class="field-group">
           <label>¿En qué gastaron? (Ingresa todo lo que quieras)</label>
           <input type="text" id="expDesc" class="field-input" placeholder="Ej. Mercado supermercado, cena, recibo luz..." required />
@@ -938,7 +1049,7 @@
           <select id="expPayer" class="field-input"></select>
         </div>
 
-        <button type="submit" class="primary-btn">Guardar Gasto</button>
+        <button type="submit" id="expSubmitBtn" class="primary-btn">Guardar Gasto</button>
       </form>
     </div>
   </div>
@@ -1271,13 +1382,18 @@
         mergedConfigs[ym] = chosen;
       });
 
-      // Unir todos los gastos de ambos dispositivos excepto los eliminados
+      // Unir todos los gastos de ambos dispositivos respetando la edición más reciente y excluyendo eliminados
       const expMap = new Map();
       (remoteSt.expenses || []).forEach(e => {
         if (!deletedSet.has(e.id)) expMap.set(e.id, e);
       });
       (localSt.expenses || []).forEach(e => {
-        if (!deletedSet.has(e.id)) expMap.set(e.id, e);
+        if (!deletedSet.has(e.id)) {
+          const prev = expMap.get(e.id);
+          if (!prev || Number(e.updatedAt || 0) >= Number(prev.updatedAt || 0)) {
+            expMap.set(e.id, e);
+          }
+        }
       });
 
       return {
@@ -1573,8 +1689,45 @@
     };
 
     window.openExpenseModal = function() {
+      document.getElementById('expenseModalTitle').textContent = 'Nuevo Gasto';
+      document.getElementById('expSubmitBtn').textContent = 'Guardar Gasto';
+      document.getElementById('expEditId').value = '';
+      document.getElementById('expDesc').value = '';
+      document.getElementById('expAmount').value = '';
+      syncExpenseDefaultDate(monthPicker.value);
+      renderChips();
       document.getElementById('expenseModal').classList.add('open');
-      setTimeout(() => document.getElementById('expDesc').focus(), 100);
+      setTimeout(() => {
+        try { document.getElementById('expDesc').focus(); } catch (e) {}
+      }, 100);
+    };
+
+    window.openEditExpenseModal = function(id) {
+      const exp = state.expenses.find(item => item.id === id);
+      if (!exp) return;
+      document.getElementById('expenseModalTitle').textContent = 'Editar Gasto';
+      document.getElementById('expSubmitBtn').textContent = 'Guardar Cambios';
+      document.getElementById('expEditId').value = exp.id;
+      document.getElementById('expDesc').value = exp.desc || '';
+      document.getElementById('expAmount').value = exp.amount || '';
+      document.getElementById('expDate').value = exp.date || todayStr;
+      const rubroSelect = document.getElementById('expRubro');
+      if (exp.rubroId && Array.from(rubroSelect.options).some(o => o.value === exp.rubroId)) {
+        rubroSelect.value = exp.rubroId;
+      }
+      renderChips();
+      const payerSelect = document.getElementById('expPayer');
+      if (exp.payer && Array.from(payerSelect.options).some(o => o.value === exp.payer)) {
+        payerSelect.value = exp.payer;
+      }
+      document.getElementById('expenseModal').classList.add('open');
+      setTimeout(() => {
+        try {
+          const amtInput = document.getElementById('expAmount');
+          amtInput.focus();
+          if (amtInput.select) amtInput.select();
+        } catch (e) {}
+      }, 100);
     };
 
     window.openNewRubroModal = function() {
@@ -1728,6 +1881,7 @@
 
     document.getElementById('expenseForm').addEventListener('submit', (e) => {
       e.preventDefault();
+      const editId = document.getElementById('expEditId').value;
       const date = document.getElementById('expDate').value;
       const rubroId = document.getElementById('expRubro').value;
       const amount = parseFloat(document.getElementById('expAmount').value) || 0;
@@ -1736,15 +1890,29 @@
 
       if (!rubroId || amount <= 0) return;
 
-      state.expenses.push({
-        id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        date,
-        rubroId,
-        amount,
-        payer,
-        desc
-      });
+      if (editId) {
+        const target = state.expenses.find(item => item.id === editId);
+        if (target) {
+          target.date = date;
+          target.rubroId = rubroId;
+          target.amount = amount;
+          target.payer = payer;
+          target.desc = desc;
+          target.updatedAt = Date.now();
+        }
+      } else {
+        state.expenses.push({
+          id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          date,
+          rubroId,
+          amount,
+          payer,
+          desc,
+          updatedAt: Date.now()
+        });
+      }
 
+      document.getElementById('expEditId').value = '';
       document.getElementById('expAmount').value = '';
       document.getElementById('expDesc').value = '';
       closeModals();
@@ -1790,7 +1958,8 @@
       saveState();
     });
 
-    window.deleteExpense = function(id) {
+    window.deleteExpense = function(id, evt) {
+      if (evt) evt.stopPropagation();
       if (!state.deletedIds) state.deletedIds = [];
       state.deletedIds.push(id);
       state.expenses = state.expenses.filter(e => e.id !== id);
@@ -1856,12 +2025,16 @@
       }
 
       const remEl = document.getElementById('rubrosRemaining');
-      remEl.textContent = fmtMoney(remaining);
+      remEl.textContent = remaining >= 0 ? fmtMoney(remaining) : '-' + fmtMoney(Math.abs(remaining));
       remEl.style.color = remaining < 0 ? 'var(--red)' : 'var(--green)';
-      document.getElementById('monthlyBaseLabel').textContent =
-        `Presupuesto ${fmtMonthName(selectedMonth)}: ${fmtMoney(totalBudget)}`;
-      document.getElementById('rubrosSumVal').textContent = fmtMoney(sumRubrosBudget);
-      document.getElementById('rubrosCount').textContent = `${activeRubros.length} rubros (+ Crear nuevo)`;
+      const pctUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+      document.getElementById('rubrosBudgetTotal').textContent = fmtMoney(totalBudget);
+      document.getElementById('rubrosSpentTotal').textContent = fmtMoney(totalSpent);
+      document.getElementById('rubrosPctHint').textContent = `${pctUsed}% usado`;
+      const diffHintEl = document.getElementById('rubrosDiffHint');
+      diffHintEl.textContent = remaining >= 0 ? 'Falta para meta' : 'Excedido por';
+      diffHintEl.style.color = remaining >= 0 ? 'var(--green)' : 'var(--red)';
+      document.getElementById('rubrosCount').textContent = `${activeRubros.length} rubros`;
 
       // 1. RENDER GASTOS GROUPED BY DATE
       const query = document.getElementById('searchFilter').value.toLowerCase().trim();
@@ -1906,7 +2079,7 @@
                 const r = rubroMap[e.rubroId] || { segment: 'General', name: 'Rubro anterior' };
                 const icon = getCategoryIcon(r.name + ' ' + r.segment + ' ' + e.desc);
                 return `
-                  <div class="tc-card">
+                  <div class="tc-card clickable" onclick="openEditExpenseModal('${e.id}')" title="Toca para editar este gasto">
                     <div class="tc-left">
                       <div class="tc-icon">${icon}</div>
                       <div class="tc-info">
@@ -1916,7 +2089,8 @@
                     </div>
                     <div class="tc-right">
                       <div class="tc-amount">${fmtMoney(e.amount)}</div>
-                      <button class="del-btn" onclick="deleteExpense('${e.id}')" title="Eliminar">✕</button>
+                      <button class="edit-btn" onclick="event.stopPropagation(); openEditExpenseModal('${e.id}')" title="Editar gasto">✏️</button>
+                      <button class="del-btn" onclick="deleteExpense('${e.id}', event)" title="Eliminar">✕</button>
                     </div>
                   </div>
                 `;
@@ -2008,36 +2182,41 @@
       document.getElementById('rubrosGroupedList').innerHTML = Object.entries(segGroups).map(([seg, items]) => {
         const segBudget = items.reduce((s, i) => s + Number(i.budget || 0), 0);
         const segSpent = items.reduce((s, i) => s + Number(i.spent || 0), 0);
+        const segDiff = segBudget - segSpent;
+        const segDiffTxt = segDiff >= 0
+          ? `Falta: ${fmtMoney(segDiff)}`
+          : `Excedido: +${fmtMoney(Math.abs(segDiff))}`;
         return `
           <div class="group-header">
             <span>${seg}</span>
-            <span class="sub">${fmtMoney(segSpent)} / ${fmtMoney(segBudget)}</span>
+            <span class="sub">${fmtMoney(segSpent)} / ${fmtMoney(segBudget)} • <strong style="color:${segDiff >= 0 ? 'var(--green)' : 'var(--red)'};">${segDiffTxt}</strong></span>
           </div>
           <div class="card-list">
             ${items.map(r => {
               const barColor = r.spent > r.budget
                 ? 'var(--red)'
                 : (r.spent >= r.budget * 0.85 ? 'var(--orange)' : 'var(--blue)');
-              const statusTxt = r.spent === 0
-                ? `Presupuesto: ${fmtMoney(r.budget)} (Sin gastos)`
-                : (r.diff >= 0 ? `Disponible: ${fmtMoney(r.diff)} de ${fmtMoney(r.budget)}` : `Excedido en ${fmtMoney(Math.abs(r.diff))}`);
+              const diffColor = r.diff >= 0 ? 'var(--green)' : 'var(--red)';
+              const diffLabel = r.diff >= 0
+                ? `Falta: ${fmtMoney(r.diff)}`
+                : `Excedido: +${fmtMoney(Math.abs(r.diff))}`;
               return `
                 <div class="tc-card clickable" onclick="openEditRubroModal('${r.id}')" title="Toca para editar la cantidad de este rubro en ${fmtMonthName(selectedMonth)}">
                   <div class="tc-left">
                     <div class="tc-icon">${getCategoryIcon(r.name + ' ' + r.segment)}</div>
                     <div class="tc-info">
                       <div class="tc-title">${r.name}</div>
-                      <div class="tc-sub">${statusTxt}</div>
+                      <div class="rubro-metrics-row">
+                        <span class="rubro-metric-pill">Meta: <strong style="color:var(--text);">${fmtMoney(r.budget)}</strong></span>
+                        <span class="rubro-metric-pill">Gastado: <strong style="color:var(--blue);">${fmtMoney(r.spent)}</strong></span>
+                        <span class="rubro-metric-pill" style="color:${diffColor};"><strong>${diffLabel}</strong></span>
+                      </div>
                       <div class="mini-progress">
                         <div class="mini-progress-fill" style="width:${r.pct}%;background:${barColor};"></div>
                       </div>
                     </div>
                   </div>
                   <div class="tc-right">
-                    <div>
-                      <div class="tc-amount">${fmtMoney(r.budget)}</div>
-                      <div class="tc-sub" style="text-align:right;color:var(--blue);">Gastado: ${fmtMoney(r.spent)}</div>
-                    </div>
                     <button class="edit-btn" onclick="event.stopPropagation(); openEditRubroModal('${r.id}')" title="Editar cantidad">✏️</button>
                     <button class="del-btn" onclick="deleteRubro('${r.id}', event)" title="Eliminar rubro">✕</button>
                   </div>
@@ -2048,14 +2227,28 @@
         `;
       }).join('');
 
-      // 4. RENDER ANÁLISIS DEL MES
+      // 4. RENDER ANÁLISIS DEL MES (Con barras interactivas al tocar o pasar el dedo/mouse)
       const [year, month] = selectedMonth.split('-').map(Number);
       const daysInMonth = new Date(year, month, 0).getDate();
       const dailyTotals = Array(daysInMonth + 1).fill(0);
+      const dailyByDay = {};
+      for (let d = 1; d <= daysInMonth; d++) dailyByDay[d] = [];
+
       monthExpenses.forEach(e => {
         const day = parseInt(e.date.split('-')[2], 10);
-        if (day >= 1 && day <= daysInMonth) dailyTotals[day] += e.amount;
+        if (day >= 1 && day <= daysInMonth) {
+          dailyTotals[day] += Number(e.amount || 0);
+          dailyByDay[day].push(e);
+        }
       });
+
+      window._dailyChartContext = {
+        selectedMonth,
+        dailyTotals,
+        dailyByDay,
+        rubroMap
+      };
+
       const maxDaily = Math.max(...dailyTotals, 1);
       const dailyTarget = totalBudget / daysInMonth;
       const activeDays = new Set(monthExpenses.map(e => e.date)).size || 1;
@@ -2067,13 +2260,26 @@
         const heightPct = Math.max(4, Math.round((val / maxDaily) * 100));
         const isOver = val > dailyTarget && dailyTarget > 0;
         chartHTML += `
-          <div class="day-col" title="Día ${d}: ${fmtMoney(val)}">
+          <div class="day-col" data-day="${d}" onmouseenter="showDayDetail(${d})" onclick="showDayDetail(${d})">
             <div class="day-bar ${isOver ? 'over-avg' : ''}" style="height:${val > 0 ? heightPct : 3}%;opacity:${val > 0 ? 1 : 0.22};"></div>
             <span class="day-label">${d}</span>
           </div>
         `;
       }
-      document.getElementById('dailyChart').innerHTML = chartHTML;
+      const chartEl = document.getElementById('dailyChart');
+      chartEl.innerHTML = chartHTML;
+
+      // Mostrar por defecto el último día con gastos (o el día de hoy si pertenece al mes)
+      let defaultDay = 0;
+      for (let d = daysInMonth; d >= 1; d--) {
+        if (dailyTotals[d] > 0) { defaultDay = d; break; }
+      }
+      if (defaultDay > 0) {
+        showDayDetail(defaultDay);
+      } else {
+        document.getElementById('dailyTooltipBox').innerHTML =
+          `<div class="tc-sub" style="text-align:center;">No hay gastos registrados en ${fmtMonthName(selectedMonth)} todavía. Toca cualquier barra para inspeccionar el día.</div>`;
+      }
 
       // Render Saldos Excedidos del Mes Anterior (SOLO donde se gastó de más en el mes previo) y comparativo en el mes actual
       const prevOver = getPrevMonthOverages(selectedMonth);
@@ -2154,6 +2360,81 @@
         false
       );
     }
+
+    // Mostrar detalle interactivo de un día en "Ritmo Día a Día" (al tocar, deslizar el dedo o pasar el mouse)
+    window.showDayDetail = function(day) {
+      const ctx = window._dailyChartContext;
+      const box = document.getElementById('dailyTooltipBox');
+      if (!ctx || !box) return;
+
+      document.querySelectorAll('#dailyChart .day-col').forEach(col => {
+        col.classList.toggle('active-day', Number(col.dataset.day) === Number(day));
+      });
+
+      const total = ctx.dailyTotals[day] || 0;
+      const items = ctx.dailyByDay[day] || [];
+      const dayLabel = `Día ${day} de ${fmtMonthName(ctx.selectedMonth)}`;
+
+      if (items.length === 0) {
+        box.innerHTML = `
+          <div class="daily-detail-head">
+            <span>📅 ${dayLabel}</span>
+            <span style="color:var(--text-secondary);">$0</span>
+          </div>
+          <div class="tc-sub">Sin gastos registrados en este día.</div>
+        `;
+        return;
+      }
+
+      // Agrupar gastos del día por rubro
+      const byRubro = {};
+      items.forEach(e => {
+        const r = ctx.rubroMap[e.rubroId] || { segment: 'General', name: 'Otro rubro' };
+        if (!byRubro[r.name]) {
+          byRubro[r.name] = {
+            icon: getCategoryIcon(r.name + ' ' + r.segment),
+            segment: r.segment,
+            total: 0,
+            details: []
+          };
+        }
+        byRubro[r.name].total += Number(e.amount || 0);
+        byRubro[r.name].details.push(`${e.desc} (${e.payer})`);
+      });
+
+      box.innerHTML = `
+        <div class="daily-detail-head">
+          <span>📅 ${dayLabel}</span>
+          <span style="color:var(--blue);">${fmtMoney(total)}</span>
+        </div>
+        ${Object.entries(byRubro).map(([rName, info]) => `
+          <div class="daily-detail-rubro">
+            <div style="min-width:0;flex:1;">
+              <div style="color:var(--text);font-weight:600;">${info.icon} ${rName} <span style="color:var(--text-muted);font-weight:400;">(${info.segment})</span></div>
+              <div style="font-size:0.72rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${info.details.join(' • ')}</div>
+            </div>
+            <strong style="color:var(--text);white-space:nowrap;">${fmtMoney(info.total)}</strong>
+          </div>
+        `).join('')}
+      `;
+    };
+
+    // Soporte fluido para deslizar el dedo por encima de las barras en iPhone y Android
+    (function setupTouchChartInspection() {
+      const chartEl = document.getElementById('dailyChart');
+      if (!chartEl) return;
+      const inspectTouchPoint = (evt) => {
+        if (!evt.touches || !evt.touches.length) return;
+        const touch = evt.touches[0];
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const col = el ? el.closest('.day-col') : null;
+        if (col && col.dataset.day) {
+          showDayDetail(Number(col.dataset.day));
+        }
+      };
+      chartEl.addEventListener('touchstart', inspectTouchPoint, { passive: true });
+      chartEl.addEventListener('touchmove', inspectTouchPoint, { passive: true });
+    })();
 
     // ============================================================================
     // MOTOR BIDIRECCIONAL EXCEL DASHBOARD <-> APLICACIÓN (Tiempo Real + Manual)
