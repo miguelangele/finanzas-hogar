@@ -1016,9 +1016,14 @@
         </div>
       </div>
 
-      <button class="reimburse-btn-card" onclick="openNewRubroModal()">
-        + Crear Nuevo Rubro en este Mes
-      </button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.55rem;">
+        <button class="reimburse-btn-card" style="margin:0;" onclick="openNewRubroModal()">
+          + Nuevo Rubro
+        </button>
+        <button class="reimburse-btn-card" style="margin:0;color:var(--green);border-color:rgba(48,209,88,0.3);" onclick="syncFixedRubrosFromPrevMonth()">
+          📌 Traer 6 Fijos del Mes Ant.
+        </button>
+      </div>
 
       <div style="font-size:0.76rem;color:var(--text-secondary);text-align:center;margin-bottom:0.5rem;">
         💡 Los valores de cada rubro se guardan por separado para cada mes. Toca un rubro o <strong>✏️</strong> para editarlo.
@@ -1406,13 +1411,59 @@
       document.getElementById('pinLockScreen').classList.remove('unlocked');
     };
 
-    const defaultRubrosTemplate = [
-      { id: 'r2', segment: 'Hogar Fijo', name: 'Servicios (Luz, Agua, Internet)', budget: 300000 },
-      { id: 'r3', segment: 'Alimentación', name: 'Mercado Casa', budget: 800000 },
-      { id: 'r4', segment: 'Ocio y Pareja', name: 'Salidas y Restaurantes', budget: 350000 },
-      { id: 'r5', segment: 'Transporte', name: 'Transporte / Gasolina', budget: 250000 },
-      { id: 'r6', segment: 'Ahorro', name: 'Fondo del Hogar', budget: 400000 }
+    // 6 Rubros Fijos que se heredan automáticamente mes a mes (Nov -> Dic -> Ene -> ...)
+    const FIXED_RECURRING_RUBROS = [
+      { key: 'servicios', defaultId: 'r2', segment: 'Hogar Fijo', name: 'Servicios (Luz, Agua, Internet)', defaultBudget: 300000, match: (t) => t.includes('servicio') },
+      { key: 'mercado', defaultId: 'r3', segment: 'Alimentación', name: 'Mercado Casa', defaultBudget: 800000, match: (t) => t.includes('mercado') },
+      { key: 'alicia', defaultId: 'r_alicia', segment: 'Hogar Fijo', name: 'Fondo Alicia', defaultBudget: 200000, match: (t) => t.includes('alicia') },
+      { key: 'emergencia', defaultId: 'r_emergencia', segment: 'Ahorro', name: 'Fondo de Emergencia', defaultBudget: 0, match: (t) => t.includes('emergencia') },
+      { key: 'arriendo', defaultId: 'r1', segment: 'Hogar Fijo', name: 'Arriendo', defaultBudget: 0, match: (t) => t.includes('arriendo') },
+      { key: 'casita', defaultId: 'r_casita', segment: 'Ahorro', name: 'Ahorro Casita', defaultBudget: 0, match: (t) => t.includes('casita') }
     ];
+
+    function normalizeTextSimple(str) {
+      return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function matchFixedRubroDef(rubroName) {
+      const t = normalizeTextSimple(rubroName);
+      return FIXED_RECURRING_RUBROS.find(def => def.match(t)) || null;
+    }
+
+    function isFixedRubro(rubroName) {
+      return !!matchFixedRubroDef(rubroName);
+    }
+
+    function buildFixedRubrosFromSource(sourceRubros) {
+      const list = Array.isArray(sourceRubros) ? sourceRubros : [];
+      return FIXED_RECURRING_RUBROS.map(def => {
+        const found = list.find(r => def.match(normalizeTextSimple(r.name)));
+        if (found) {
+          return {
+            id: found.id,
+            segment: found.segment || def.segment,
+            name: found.name,
+            budget: Number(found.budget || 0),
+            fixed: true
+          };
+        }
+        return {
+          id: def.defaultId,
+          segment: def.segment,
+          name: def.name,
+          budget: def.defaultBudget,
+          fixed: true
+        };
+      });
+    }
+
+    const defaultRubrosTemplate = FIXED_RECURRING_RUBROS.map(def => ({
+      id: def.defaultId,
+      segment: def.segment,
+      name: def.name,
+      budget: def.defaultBudget,
+      fixed: true
+    }));
 
     const defaultData = {
       partners: ['Persona 1', 'Persona 2'],
@@ -1548,24 +1599,96 @@
       }
       if (!state.monthlyConfigs[ym]) {
         const existingMonths = Object.keys(state.monthlyConfigs).sort();
-        let sourceRubros = state.rubros && state.rubros.length ? state.rubros : defaultRubrosTemplate;
-        let sourceCustomBudget = state.customMonthlyBudget !== undefined ? state.customMonthlyBudget : null;
+        const prevYm = getPrevMonthStr(ym);
+        let sourceRubros = defaultRubrosTemplate;
 
-        if (existingMonths.length > 0) {
+        if (state.monthlyConfigs[prevYm]) {
+          // Toma como referencia el mes inmediatamente anterior (ej. Dic <- Nov, Ene <- Dic)
+          sourceRubros = state.monthlyConfigs[prevYm].rubros;
+        } else if (existingMonths.length > 0) {
           const prevMonths = existingMonths.filter(m => m < ym);
           const refMonth = prevMonths.length > 0 ? prevMonths[prevMonths.length - 1] : existingMonths[existingMonths.length - 1];
           sourceRubros = state.monthlyConfigs[refMonth].rubros;
-          sourceCustomBudget = state.monthlyConfigs[refMonth].customMonthlyBudget;
+        } else if (state.rubros && state.rubros.length) {
+          sourceRubros = state.rubros;
         }
 
+        // Heredar ÚNICAMENTE los 6 rubros fijos con su presupuesto exacto del mes anterior
         state.monthlyConfigs[ym] = {
           updatedAt: Date.now(),
-          rubros: deepClone(sourceRubros),
-          customMonthlyBudget: sourceCustomBudget
+          autoInherited: true,
+          rubros: buildFixedRubrosFromSource(sourceRubros),
+          customMonthlyBudget: null
         };
       }
       return state.monthlyConfigs[ym];
     }
+
+    // Propaga cambios de los 6 rubros fijos hacia meses futuros que aún sean heredados automáticamente y sin gastos
+    function propagateFixedRubrosForward(fromYm) {
+      const futureMonths = Object.keys(state.monthlyConfigs || {})
+        .filter(m => m > fromYm)
+        .sort();
+      let prevRubros = (state.monthlyConfigs[fromYm] && state.monthlyConfigs[fromYm].rubros) || defaultRubrosTemplate;
+
+      futureMonths.forEach(m => {
+        const cfg = state.monthlyConfigs[m];
+        const hasExpenses = state.expenses.some(e => e.date && e.date.startsWith(m));
+        if (cfg && cfg.autoInherited && !hasExpenses) {
+          cfg.rubros = buildFixedRubrosFromSource(prevRubros);
+          cfg.customMonthlyBudget = null;
+          cfg.updatedAt = Date.now();
+        }
+        prevRubros = cfg ? cfg.rubros : prevRubros;
+      });
+    }
+
+    // Botón manual en la pestaña Rubros para traer los 6 rubros fijos y sus presupuestos exactos del mes inmediatamente anterior
+    window.syncFixedRubrosFromPrevMonth = function() {
+      const ym = monthPicker.value;
+      const prevYm = getPrevMonthStr(ym);
+      const prevConfig = state.monthlyConfigs && state.monthlyConfigs[prevYm];
+      const existingMonths = Object.keys(state.monthlyConfigs || {}).filter(m => m < ym).sort();
+      const refYm = prevConfig ? prevYm : (existingMonths.length > 0 ? existingMonths[existingMonths.length - 1] : null);
+
+      if (!refYm) {
+        // Si no hay mes anterior configurado, asegurar los 6 rubros fijos en el mes actual
+        const curr = getMonthConfig(ym);
+        const existingFixedKeys = new Set();
+        curr.rubros.forEach(r => {
+          const def = matchFixedRubroDef(r.name);
+          if (def) existingFixedKeys.add(def.key);
+        });
+        FIXED_RECURRING_RUBROS.forEach(def => {
+          if (!existingFixedKeys.has(def.key)) {
+            curr.rubros.push({ id: def.defaultId, segment: def.segment, name: def.name, budget: def.defaultBudget, fixed: true });
+          }
+        });
+        curr.updatedAt = Date.now();
+        saveState();
+        alert(`✅ Se agregaron los 6 rubros fijos en ${fmtMonthName(ym)}.`);
+        return;
+      }
+
+      const refRubros = state.monthlyConfigs[refYm].rubros || [];
+      const fixedFromPrev = buildFixedRubrosFromSource(refRubros);
+      const currConfig = getMonthConfig(ym);
+
+      // Conservar solo rubros extra (no fijos) que YA tengan gastos registrados en este mes
+      const monthExps = state.expenses.filter(e => e.date && e.date.startsWith(ym));
+      const usedExtraRubros = (currConfig.rubros || []).filter(r => {
+        if (isFixedRubro(r.name)) return false;
+        return monthExps.some(e => e.rubroId === r.id);
+      });
+
+      currConfig.rubros = [...fixedFromPrev, ...usedExtraRubros];
+      currConfig.customMonthlyBudget = null;
+      currConfig.autoInherited = true;
+      currConfig.updatedAt = Date.now();
+      propagateFixedRubrosForward(ym);
+      saveState();
+      alert(`📌 ¡Listo! ${fmtMonthName(ym)} ahora tiene los 6 rubros fijos con los presupuestos de ${fmtMonthName(refYm)}.`);
+    };
 
     // Fusión inteligente multi-dispositivo (Celulares + Nube + PC) respetando ediciones y eliminaciones
     function mergeStates(localSt, remoteSt) {
@@ -2388,7 +2511,9 @@
         }
       }
 
+      mConfig.autoInherited = false;
       mConfig.updatedAt = Date.now();
+      propagateFixedRubrosForward(ym);
       document.getElementById('rubroEditId').value = '';
       document.getElementById('rubroName').value = '';
       document.getElementById('rubroBudget').value = '';
@@ -2643,7 +2768,7 @@
                   <div class="tc-left">
                     <div class="tc-icon">${getCategoryIcon(r.name + ' ' + r.segment)}</div>
                     <div class="tc-info">
-                      <div class="tc-title">${r.name}</div>
+                      <div class="tc-title">${r.name} ${isFixedRubro(r.name) ? '<span style="font-size:0.65rem;padding:0.1rem 0.42rem;border-radius:999px;background:rgba(48,209,88,0.16);color:var(--green);font-weight:700;margin-left:0.3rem;vertical-align:middle;">📌 Fijo</span>' : ''}</div>
                       <div class="rubro-metrics-row">
                         <span class="rubro-metric-pill">Meta: <strong style="color:var(--text);">${fmtMoney(r.budget)}</strong></span>
                         <span class="rubro-metric-pill">Gastado: <strong style="color:var(--blue);">${fmtMoney(r.spent)}</strong></span>

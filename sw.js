@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanzas-hogar-v7';
+const CACHE_NAME = 'finanzas-hogar-v8';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', (e) => {
