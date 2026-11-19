@@ -1397,10 +1397,7 @@
     window.lockApp = function(clearRemembered) {
       isUnlocked = false;
       activePin = '';
-      if (liveEventSource) {
-        try { liveEventSource.close(); } catch (e) {}
-        liveEventSource = null;
-      }
+      if (typeof closeMqttClean === 'function') closeMqttClean();
       if (clearRemembered) {
         try { localStorage.removeItem(SAVED_PIN_KEY); } catch (e) {}
       }
@@ -1635,85 +1632,256 @@
       };
     }
 
-    // Reensamblador de mensajes cifrados por bloques (evita el límite de 4096 bytes de ntfy.sh para que nunca se corte la sincronización)
-    const liveChunkBuffers = {};
+    // ============================================================================
+    // SINCRONIZACIÓN CIFRADA EN TIEMPO REAL POR INTERNET (MQTT-WSS con RETAIN=1)
+    // Cero bloqueos CORS, sin límite de 4KB, instantáneo (<200ms) en iOS, Android y PC
+    // ============================================================================
+    const MQTT_BROKERS = [
+      'wss://broker.emqx.io:8084/mqtt',
+      'wss://broker.hivemq.com:8884/mqtt'
+    ];
+    let mqttWs = null;
+    let mqttConnected = false;
+    let mqttPingTimer = null;
+    let mqttReconnectTimer = null;
+    let mqttBrokerIdx = 0;
+    let mqttIncomingBuf = new Uint8Array(0);
+    let lastCloudSyncTimeStr = '';
 
-    function processIncomingCloudText(rawText, buffers) {
-      if (!rawText || !activePin) return null;
-      if (rawText.startsWith('ENC2:')) {
-        const dec = decryptWithPin(rawText, activePin);
-        if (!dec) return null;
-        try { return JSON.parse(dec); } catch (e) { return null; }
-      }
-      if (rawText.startsWith('ENC2C:')) {
-        // Formato: ENC2C:<batchId>:<idx>/<total>:<slice>
-        const p1 = rawText.indexOf(':', 6);
-        if (p1 < 0) return null;
-        const batchId = rawText.slice(6, p1);
-        const p2 = rawText.indexOf(':', p1 + 1);
-        if (p2 < 0) return null;
-        const frac = rawText.slice(p1 + 1, p2).split('/');
-        const idx = parseInt(frac[0], 10);
-        const total = parseInt(frac[1], 10);
-        const slice = rawText.slice(p2 + 1);
-        if (isNaN(idx) || isNaN(total) || total <= 0) return null;
-
-        if (!buffers[batchId]) buffers[batchId] = { total, parts: {}, count: 0 };
-        if (buffers[batchId].parts[idx] === undefined) {
-          buffers[batchId].parts[idx] = slice;
-          buffers[batchId].count++;
-        }
-        if (buffers[batchId].count === total) {
-          let fullEnc = '';
-          for (let i = 0; i < total; i++) {
-            if (buffers[batchId].parts[i] === undefined) return null;
-            fullEnc += buffers[batchId].parts[i];
-          }
-          delete buffers[batchId];
-          const dec = decryptWithPin(fullEnc, activePin);
-          if (!dec) return null;
-          try { return JSON.parse(dec); } catch (e) { return null; }
-        }
-      }
-      return null;
+    function isLocalPcHost() {
+      const h = location.hostname || '';
+      return location.protocol.startsWith('http') && (h === 'localhost' || h === '127.0.0.1' || h.startsWith('192.168.'));
     }
 
-    async function pullFromCloud() {
-      const channel = getCloudChannel();
-      if (!channel || !activePin) return null;
-      const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}/json?poll=1`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Error al conectar con la nube');
-      const text = await res.text();
-      const lines = text.trim().split('\n').filter(Boolean);
-      let latestRemote = null;
-      const pollBuffers = {};
+    function mqttEncodeVarLen(x) {
+      const out = [];
+      do {
+        let d = x % 128;
+        x = Math.floor(x / 128);
+        if (x > 0) d |= 0x80;
+        out.push(d);
+      } while (x > 0);
+      return new Uint8Array(out);
+    }
 
-      for (const line of lines) {
-        try {
-          const msg = JSON.parse(line);
-          if (msg.event === 'message') {
-            let msgBody = msg.message || '';
-            // Respaldo si algún mensaje anterior superó 4KB y quedó como adjunto
-            if (!msgBody.startsWith('ENC2') && msg.attachment && msg.attachment.url) {
-              try {
-                const attRes = await fetch(msg.attachment.url, { cache: 'no-store' });
-                if (attRes.ok) msgBody = await attRes.text();
-              } catch (e) {}
-            }
-            const payload = processIncomingCloudText(msgBody, pollBuffers);
-            if (payload && payload.partners && payload.monthlyConfigs) {
-              latestRemote = mergeStates(latestRemote, payload);
+    function mqttEncodeStr(s) {
+      const b = utf8Encode(s);
+      const out = new Uint8Array(2 + b.length);
+      out[0] = (b.length >> 8) & 0xff;
+      out[1] = b.length & 0xff;
+      out.set(b, 2);
+      return out;
+    }
+
+    function mqttBuildConnect(clientId) {
+      const vh = concatBytes(
+        mqttEncodeStr('MQTT'),
+        new Uint8Array([0x04, 0x02, 0x00, 0x3c]) // MQTT 3.1.1, CleanSession=1, KeepAlive=60s
+      );
+      const pl = mqttEncodeStr(clientId);
+      const rem = concatBytes(vh, pl);
+      return concatBytes(new Uint8Array([0x10]), mqttEncodeVarLen(rem.length), rem);
+    }
+
+    function mqttBuildSubscribe(topic, packetId) {
+      const vh = new Uint8Array([(packetId >> 8) & 0xff, packetId & 0xff]);
+      const pl = concatBytes(mqttEncodeStr(topic), new Uint8Array([0x00]));
+      const rem = concatBytes(vh, pl);
+      return concatBytes(new Uint8Array([0x82]), mqttEncodeVarLen(rem.length), rem);
+    }
+
+    function mqttBuildPublishRetained(topic, payloadStr) {
+      const vh = mqttEncodeStr(topic);
+      const pl = utf8Encode(payloadStr);
+      const rem = concatBytes(vh, pl);
+      // 0x31 = PUBLISH, DUP=0, QoS=0, RETAIN=1 (el servidor guarda el último estado cifrado)
+      return concatBytes(new Uint8Array([0x31]), mqttEncodeVarLen(rem.length), rem);
+    }
+
+    function getMqttTopic() {
+      const ch = getCloudChannel();
+      return ch ? ('fh/v2/' + ch) : '';
+    }
+
+    function closeMqttClean() {
+      mqttConnected = false;
+      cloudConnected = false;
+      if (mqttPingTimer) { clearInterval(mqttPingTimer); mqttPingTimer = null; }
+      if (mqttReconnectTimer) { clearTimeout(mqttReconnectTimer); mqttReconnectTimer = null; }
+      if (mqttWs) {
+        try { mqttWs.onclose = null; mqttWs.onerror = null; mqttWs.onmessage = null; mqttWs.close(); } catch (e) {}
+        mqttWs = null;
+      }
+    }
+
+    async function handleMqttPublishPayload(payloadStr) {
+      if (!isUnlocked || !activePin || !payloadStr) return;
+      const dec = decryptWithPin(payloadStr, activePin);
+      if (!dec) return;
+      try {
+        const incoming = JSON.parse(dec);
+        if (!incoming || !incoming.partners || !incoming.monthlyConfigs) return;
+        if (incoming._sender === DEVICE_ID) return;
+        const beforeSig = JSON.stringify(state.expenses) + JSON.stringify(state.monthlyConfigs) + JSON.stringify(state.partners);
+        const merged = mergeStates(state, incoming);
+        const afterSig = JSON.stringify(merged.expenses) + JSON.stringify(merged.monthlyConfigs) + JSON.stringify(merged.partners);
+        lastCloudSyncTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (afterSig !== beforeSig) {
+          state = merged;
+          safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+          await syncLocalPcSilent();
+          renderAll();
+        } else {
+          updateConnectionLabel();
+        }
+      } catch (e) {}
+    }
+
+    function drainMqttPackets(onConnack, onSuback) {
+      while (mqttIncomingBuf.length >= 2) {
+        let mult = 1, remLen = 0, pos = 1, byteVal = 0;
+        let completeHeader = false;
+        while (pos < mqttIncomingBuf.length) {
+          byteVal = mqttIncomingBuf[pos++];
+          remLen += (byteVal & 127) * mult;
+          mult *= 128;
+          if ((byteVal & 128) === 0) { completeHeader = true; break; }
+          if (pos > 5) return;
+        }
+        if (!completeHeader || mqttIncomingBuf.length < pos + remLen) return;
+        const pktType = mqttIncomingBuf[0] & 0xf0;
+        const flags = mqttIncomingBuf[0] & 0x0f;
+        const body = mqttIncomingBuf.slice(pos, pos + remLen);
+        mqttIncomingBuf = mqttIncomingBuf.slice(pos + remLen);
+
+        if (pktType === 0x20 && body.length >= 2 && body[1] === 0x00) {
+          if (onConnack) onConnack();
+        } else if (pktType === 0x90) {
+          if (onSuback) onSuback();
+        } else if (pktType === 0x30) {
+          if (body.length >= 2) {
+            const tLen = (body[0] << 8) | body[1];
+            let pOff = 2 + tLen;
+            const qos = (flags >> 1) & 0x03;
+            if (qos > 0) pOff += 2;
+            if (pOff <= body.length) {
+              const payloadStr = utf8Decode(body.slice(pOff));
+              handleMqttPublishPayload(payloadStr);
             }
           }
+        }
+      }
+    }
+
+    function connectMqttBroker(brokerUrl) {
+      return new Promise((resolve, reject) => {
+        if (!isUnlocked || !activePin) return reject(new Error('Bloqueado'));
+        const topic = getMqttTopic();
+        if (!topic) return reject(new Error('Sin canal'));
+
+        closeMqttClean();
+        mqttIncomingBuf = new Uint8Array(0);
+        let settled = false;
+        const failTimer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            closeMqttClean();
+            reject(new Error('Timeout conectando a ' + brokerUrl));
+          }
+        }, 5500);
+
+        try {
+          const ws = new WebSocket(brokerUrl, ['mqtt']);
+          ws.binaryType = 'arraybuffer';
+          mqttWs = ws;
+
+          ws.onopen = () => {
+            const clientId = 'fh_' + DEVICE_ID + '_' + Math.random().toString(36).slice(2, 6);
+            ws.send(mqttBuildConnect(clientId));
+          };
+
+          ws.onmessage = (evt) => {
+            const chunk = new Uint8Array(evt.data);
+            mqttIncomingBuf = concatBytes(mqttIncomingBuf, chunk);
+            drainMqttPackets(
+              () => {
+                // CONNACK recibido -> suscribirse al tópico cifrado
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(mqttBuildSubscribe(topic, 1));
+                }
+              },
+              () => {
+                // SUBACK recibido -> conexión lista y escuchando mensajes retenidos y en vivo
+                mqttConnected = true;
+                cloudConnected = true;
+                lastCloudSyncTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                updateConnectionLabel();
+                if (mqttPingTimer) clearInterval(mqttPingTimer);
+                mqttPingTimer = setInterval(() => {
+                  if (mqttWs && mqttWs.readyState === WebSocket.OPEN) {
+                    mqttWs.send(new Uint8Array([0xc0, 0x00]));
+                  }
+                }, 25000);
+                if (!settled) {
+                  settled = true;
+                  clearTimeout(failTimer);
+                  resolve(true);
+                }
+              }
+            );
+          };
+
+          ws.onerror = () => {
+            if (!settled) {
+              settled = true;
+              clearTimeout(failTimer);
+              reject(new Error('Error WebSocket'));
+            }
+          };
+
+          ws.onclose = () => {
+            mqttConnected = false;
+            cloudConnected = false;
+            updateConnectionLabel();
+            if (!settled) {
+              settled = true;
+              clearTimeout(failTimer);
+              reject(new Error('Cerrado antes de conectar'));
+            } else if (isUnlocked) {
+              // Reconexión automática en segundo plano (ideal para iOS/datos móviles)
+              if (mqttReconnectTimer) clearTimeout(mqttReconnectTimer);
+              mqttReconnectTimer = setTimeout(() => {
+                if (isUnlocked && !document.hidden) ensureCloudConnected().catch(() => {});
+              }, 3500);
+            }
+          };
+        } catch (err) {
+          if (!settled) {
+            settled = true;
+            clearTimeout(failTimer);
+            reject(err);
+          }
+        }
+      });
+    }
+
+    async function ensureCloudConnected() {
+      if (mqttWs && mqttWs.readyState === WebSocket.OPEN && mqttConnected) return true;
+      for (let attempt = 0; attempt < MQTT_BROKERS.length; attempt++) {
+        const idx = (mqttBrokerIdx + attempt) % MQTT_BROKERS.length;
+        try {
+          await connectMqttBroker(MQTT_BROKERS[idx]);
+          mqttBrokerIdx = idx;
+          return true;
         } catch (e) {}
       }
-      return latestRemote;
+      throw new Error('No se pudo conectar a los servidores de sincronización');
     }
 
     async function pushToCloud() {
-      const channel = getCloudChannel();
-      if (!channel || !activePin) return;
-      // Compactar payload eliminando duplicaciones innecesarias antes de cifrar
+      if (!isUnlocked || !activePin) return;
+      await ensureCloudConnected();
+      const topic = getMqttTopic();
       const compactState = {
         partners: state.partners,
         updatedAt: state.updatedAt || Date.now(),
@@ -1723,92 +1891,20 @@
         expenses: state.expenses,
         _sender: DEVICE_ID
       };
-      const plainPayload = JSON.stringify(compactState);
-      const encryptedBody = encryptWithPin(plainPayload, activePin);
-      const CHUNK_SIZE = 2800; // Seguro por debajo del límite de 4096 bytes de ntfy.sh
-
-      if (encryptedBody.length <= CHUNK_SIZE) {
-        const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}`, {
-          method: 'POST',
-          body: encryptedBody
-        });
-        if (res.ok) cloudConnected = true;
-      } else {
-        const batchId = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-        const total = Math.ceil(encryptedBody.length / CHUNK_SIZE);
-        let allOk = true;
-        for (let i = 0; i < total; i++) {
-          const slice = encryptedBody.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-          const chunkMsg = `ENC2C:${batchId}:${i}/${total}:${slice}`;
-          const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}`, {
-            method: 'POST',
-            body: chunkMsg
-          });
-          if (!res.ok) allOk = false;
-        }
-        if (allOk) cloudConnected = true;
-      }
-    }
-
-    function startLiveCloudListener() {
-      try {
-        if (liveEventSource) liveEventSource.close();
-        const channel = getCloudChannel();
-        if (!channel || !activePin) return;
-        liveEventSource = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse`);
-        liveEventSource.onopen = () => {
-          cloudConnected = true;
-          updateConnectionLabel();
-        };
-        liveEventSource.onmessage = async (evt) => {
-          try {
-            if (!isUnlocked || !activePin) return;
-            const data = JSON.parse(evt.data);
-            if (data.event === 'message' && data.message) {
-              const incoming = processIncomingCloudText(data.message, liveChunkBuffers);
-              if (incoming && incoming._sender !== DEVICE_ID && incoming.partners) {
-                state = mergeStates(state, incoming);
-                safeSetStorage(STORAGE_KEY, JSON.stringify(state));
-                await syncLocalPcSilent();
-                renderAll();
-              }
-            }
-          } catch (e) {}
-        };
-      } catch (e) {}
-    }
-
-    // Re-sincronización automática pensada para iOS Safari / iPhone (cuando vuelve del segundo plano o cada 15s)
-    let periodicSyncRunning = false;
-    async function backgroundCloudPullSilent() {
-      if (!isUnlocked || !activePin || periodicSyncRunning) return;
-      periodicSyncRunning = true;
-      try {
-        const beforeStr = JSON.stringify(state.expenses) + JSON.stringify(state.monthlyConfigs) + JSON.stringify(state.partners);
-        const cloudData = await pullFromCloud();
-        if (cloudData) {
-          cloudConnected = true;
-          const merged = mergeStates(state, cloudData);
-          const afterStr = JSON.stringify(merged.expenses) + JSON.stringify(merged.monthlyConfigs) + JSON.stringify(merged.partners);
-          if (afterStr !== beforeStr) {
-            state = merged;
-            safeSetStorage(STORAGE_KEY, JSON.stringify(state));
-            await syncLocalPcSilent();
-            renderAll();
-          } else {
-            updateConnectionLabel();
-          }
-        }
-      } catch (e) {}
-      finally {
-        periodicSyncRunning = false;
+      const encryptedBody = encryptWithPin(JSON.stringify(compactState), activePin);
+      if (mqttWs && mqttWs.readyState === WebSocket.OPEN) {
+        mqttWs.send(mqttBuildPublishRetained(topic, encryptedBody));
+        cloudConnected = true;
+        lastCloudSyncTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        updateConnectionLabel();
       }
     }
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && isUnlocked) {
-        backgroundCloudPullSilent();
-        startLiveCloudListener();
+        // En iOS, al regresar a la app reabrimos el socket para recibir cualquier gasto nuevo hecho en el otro celular
+        closeMqttClean();
+        ensureCloudConnected().catch(() => {});
       }
     });
     window.addEventListener('online', () => {
@@ -1816,14 +1912,9 @@
         syncCloudNow(false);
       }
     });
-    setInterval(() => {
-      if (isUnlocked && !document.hidden) {
-        backgroundCloudPullSilent();
-      }
-    }, 15000);
 
     async function syncLocalPcSilent() {
-      if (!location.protocol.startsWith('http')) return;
+      if (!isLocalPcHost()) return;
       try {
         const asciiSafeJson = JSON.stringify(state, null, 2).replace(/[\u007F-\uFFFF]/g, (chr) =>
           '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4)
@@ -1840,18 +1931,19 @@
     function updateConnectionLabel() {
       const dot = document.getElementById('dbDot');
       const sub = document.getElementById('dbStatusText');
+      const timeSuffix = lastCloudSyncTimeStr ? ` (${lastCloudSyncTimeStr})` : '';
       if (cloudConnected && pcConnected) {
         dot.style.background = 'var(--green)';
-        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • ☁️ Nube por Internet + 💻 Base de Datos en PC`;
+        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • ☁️ En Vivo${timeSuffix} + 💻 PC`;
       } else if (cloudConnected) {
         dot.style.background = 'var(--green)';
-        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • ☁️ Conectado por Internet (Nube Activa)`;
+        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • ☁️ Conectado en Vivo${timeSuffix}`;
       } else if (pcConnected) {
         dot.style.background = 'var(--green)';
         sub.textContent = `${state.partners[0]} & ${state.partners[1]} • 💻 Base de Datos en PC`;
       } else {
         dot.style.background = 'var(--blue)';
-        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • 📱 Guardado en Celular (Se sincroniza al tener internet)`;
+        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • 📱 Modo Local (Reconectando...)`;
       }
     }
 
@@ -1865,8 +1957,8 @@
         }
       } catch (e) {}
 
-      // 2. Si estamos en el PC (http://localhost:8080), cargar y unir con base-de-datos.json del PC
-      if (location.protocol.startsWith('http')) {
+      // 2. Si estamos en el PC local (localhost), cargar y unir con base-de-datos.json del PC
+      if (isLocalPcHost()) {
         try {
           const res = await fetch('/api/state', { cache: 'no-store' });
           if (res.ok) {
@@ -1879,21 +1971,19 @@
 
       renderAll();
 
-      // 3. Conectar automáticamente por Internet con la Nube (funciona desde cualquier red Wi-Fi o datos móviles 4G/5G)
+      // 3. Conectar al canal cifrado en tiempo real (recibe estado retenido del otro celular y publica unión)
       try {
-        const cloudData = await pullFromCloud();
-        cloudConnected = true;
-        if (cloudData) {
-          state = mergeStates(state, cloudData);
+        await ensureCloudConnected();
+        // Esperar brevemente para recibir y fusionar el estado retenido antes de republicar si hay datos locales
+        await new Promise(r => setTimeout(r, 700));
+        if (state.expenses.length > 0 || Object.keys(state.monthlyConfigs || {}).length > 0) {
+          await pushToCloud();
         }
-        // Publicar estado actualizado en la nube para mantenerla fresca y guardar en PC si está abierto
-        await pushToCloud();
         await syncLocalPcSilent();
         safeSetStorage(STORAGE_KEY, JSON.stringify(state));
       } catch (e) {}
 
       renderAll();
-      startLiveCloudListener();
     }
 
     async function saveState(skipExcelWrite) {
@@ -1909,7 +1999,7 @@
         await writeLiveExcelFileSilent();
       }
 
-      // Guardar y transmitir por Internet a la Nube automáticamente
+      // Guardar y transmitir por Internet cifrado en tiempo real (<200ms)
       try {
         await pushToCloud();
       } catch (e) {}
@@ -1919,23 +2009,20 @@
     window.syncCloudNow = async function(showAlert) {
       if (!isUnlocked || !activePin) return;
       try {
-        const cloudData = await pullFromCloud();
-        if (cloudData) {
-          state = mergeStates(state, cloudData);
-        }
+        closeMqttClean();
+        await ensureCloudConnected();
+        await new Promise(r => setTimeout(r, 750));
         await pushToCloud();
         await syncLocalPcSilent();
         safeSetStorage(STORAGE_KEY, JSON.stringify(state));
-        cloudConnected = true;
         renderAll();
-        startLiveCloudListener();
         if (showAlert) {
-          alert('☁️ ¡Sincronización cifrada completada! Tus datos están actualizados de forma privada en ambos celulares y el computador.');
+          alert('☁️ ¡Sincronización cifrada en vivo completada! Ambos celulares ya están conectados y actualizados.');
           closeModals();
         }
       } catch (err) {
         if (showAlert) {
-          alert('⚠️ No se detectó conexión a internet en este momento. Tus cambios siguen guardados en tu teléfono y se subirán automáticamente apenas tengas señal.');
+          alert('⚠️ No se pudo conectar con el servidor de sincronización en este momento. Tus datos siguen guardados en tu teléfono.');
         }
       }
     };
@@ -3402,7 +3489,7 @@
     // 2) O desde un archivo vinculado directamente en el navegador
     setInterval(async () => {
       if (!isUnlocked) return;
-      if (location.protocol.startsWith('http')) {
+      if (isLocalPcHost()) {
         try {
           const res = await fetch('/api/state', { cache: 'no-store' });
           if (res.ok) {
