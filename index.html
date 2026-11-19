@@ -1,0 +1,2807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <title>Finanzas del Hogar — Tricount Style</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --card-elevated: #2c2c2e;
+      --card-active: #3a3a3c;
+      --pill-active: #636366;
+      --text: #ffffff;
+      --text-secondary: #8e8e93;
+      --text-muted: #636366;
+      --blue: #0a84ff;
+      --blue-glow: rgba(10, 132, 255, 0.25);
+      --green: #30d158;
+      --red: #ff453a;
+      --orange: #ff9f0a;
+      --purple: #bf5af2;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 520px;
+      min-height: 100vh;
+      background: var(--bg);
+      position: relative;
+      padding: 1rem 1rem 8.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.25rem 0 0.75rem;
+    }
+
+    .brand-back {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--card);
+      border: none;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.15s;
+    }
+
+    .icon-btn:hover {
+      background: var(--card-elevated);
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: var(--card);
+      border: 1px solid rgba(10, 132, 255, 0.35);
+      border-radius: 999px;
+      padding: 0.15rem 0.35rem;
+    }
+
+    .month-step-btn {
+      background: transparent;
+      border: none;
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 0.15rem 0.35rem;
+      border-radius: 50%;
+    }
+
+    .month-step-btn:hover {
+      background: var(--card-elevated);
+    }
+
+    .month-pill {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 0.8rem;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .hero-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0.35rem 0 1.1rem;
+    }
+
+    .hero-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #ff9f0a 0%, #ff375f 55%, #5e5ce6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.7rem;
+      margin-bottom: 0.55rem;
+      box-shadow: 0 6px 20px rgba(255, 55, 95, 0.25);
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .hero-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 0.15rem;
+      text-align: center;
+    }
+
+    .month-badge-banner {
+      margin-top: 0.4rem;
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--blue);
+      background: rgba(10, 132, 255, 0.14);
+      border: 1px solid rgba(10, 132, 255, 0.3);
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+    }
+
+    .segmented-control {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: var(--card);
+      padding: 3px;
+      border-radius: 10px;
+      margin-bottom: 1.15rem;
+    }
+
+    .seg-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.45rem 0.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .seg-btn.active {
+      background: var(--pill-active);
+      color: var(--text);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .summary-col {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 0.75rem 0.85rem;
+      text-align: center;
+      border: 1px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .summary-col.editable {
+      cursor: pointer;
+      border-color: rgba(10, 132, 255, 0.28);
+    }
+
+    .summary-col.editable:hover {
+      background: var(--card-elevated);
+      border-color: var(--blue);
+    }
+
+    .summary-col .lbl {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+    }
+
+    .summary-col .val {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .summary-col .sub-hint {
+      font-size: 0.68rem;
+      color: var(--blue);
+      margin-top: 0.15rem;
+      font-weight: 600;
+    }
+
+    .search-box {
+      display: none;
+      margin-bottom: 0.9rem;
+    }
+
+    .search-box.open {
+      display: block;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.65rem 0.9rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .group-header {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0.95rem 0 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .group-header span.sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .tc-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.85rem;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .tc-card:hover {
+      background: #242426;
+    }
+
+    .tc-card.clickable {
+      cursor: pointer;
+    }
+
+    .tc-card.clickable:active {
+      transform: scale(0.99);
+    }
+
+    .tc-left {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .tc-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--card-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .tc-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--card-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .tc-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .tc-title {
+      font-size: 0.96rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tc-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 0.12rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tc-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .tc-amount {
+      font-size: 0.98rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .edit-btn, .del-btn {
+      background: var(--card-elevated);
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.82rem;
+      padding: 0.3rem 0.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .edit-btn:hover {
+      color: var(--blue);
+      background: rgba(10, 132, 255, 0.16);
+    }
+
+    .del-btn:hover {
+      color: var(--red);
+      background: rgba(255, 69, 58, 0.16);
+    }
+
+    .mini-progress {
+      width: 100%;
+      height: 5px;
+      background: #000000;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 0.45rem;
+    }
+
+    .mini-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .balance-banner {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .balance-emoji {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .reimburse-btn-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 0.85rem;
+      text-align: center;
+      color: var(--blue);
+      font-weight: 600;
+      font-size: 0.88rem;
+      margin-bottom: 0.65rem;
+      cursor: pointer;
+      border: 1px solid rgba(10, 132, 255, 0.25);
+      width: 100%;
+    }
+
+    .reimburse-btn-card:hover {
+      background: var(--card-elevated);
+    }
+
+    .chart-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .daily-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 120px;
+      padding-top: 0.75rem;
+      overflow-x: auto;
+    }
+
+    .day-col {
+      flex: 1;
+      min-width: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .day-bar {
+      width: 100%;
+      background: var(--blue);
+      border-radius: 3px 3px 0 0;
+      min-height: 2px;
+    }
+
+    .day-bar.over-avg {
+      background: var(--orange);
+    }
+
+    .day-label {
+      font-size: 0.62rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .floating-dock {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 520px;
+      background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.92) 35%, #000000 100%);
+      padding: 0.8rem 1rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .fab-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: auto;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+    }
+
+    .fab-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(10, 132, 255, 0.22);
+      border: 2px solid var(--blue);
+      color: var(--blue);
+      font-size: 1.85rem;
+      font-weight: 400;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px var(--blue-glow);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .fab-group:hover .fab-circle {
+      background: var(--blue);
+      color: #ffffff;
+      transform: scale(1.06);
+    }
+
+    .fab-label {
+      margin-top: 0.35rem;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--blue);
+      background: rgba(10, 132, 255, 0.16);
+      padding: 0.18rem 0.65rem;
+      border-radius: 999px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-sheet {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card);
+      border-radius: 22px 22px 0 0;
+      padding: 1.25rem 1.25rem 1.75rem;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-top: 1px solid var(--border);
+    }
+
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .sheet-header h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .sheet-close {
+      background: var(--card-elevated);
+      border: none;
+      color: var(--text-secondary);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .field-group {
+      margin-bottom: 0.85rem;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+
+    .field-input {
+      width: 100%;
+      background: var(--card-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.7rem 0.85rem;
+      border-radius: 12px;
+      font-size: 16px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    button, .tc-card.clickable, .summary-col.editable, .rubro-chip, .seg-btn {
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .field-input:focus {
+      border-color: var(--blue);
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .chip-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .rubro-chip {
+      background: var(--card-elevated);
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .rubro-chip.selected {
+      background: rgba(10, 132, 255, 0.2);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .primary-btn {
+      width: 100%;
+      background: var(--blue);
+      color: #ffffff;
+      border: none;
+      padding: 0.85rem;
+      border-radius: 12px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 0.4rem;
+    }
+
+    .secondary-btn {
+      width: 100%;
+      background: var(--card-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      padding: 0.75rem;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .view-section {
+      display: none;
+    }
+
+    .view-section.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-shell">
+    <!-- Aviso visible únicamente si iPhone abre el archivo en Vista Previa de WhatsApp/Archivos (QuickLook bloquea JavaScript) -->
+    <div id="iosJsWarning" style="background:#991b1b;color:#fff;padding:0.85rem 1rem;border-radius:12px;margin-bottom:0.85rem;font-size:0.85rem;line-height:1.4;border:1px solid #f87171;">
+      <strong>⚠️ Estás en Vista Previa de iPhone (sin edición):</strong><br/>
+      En iPhone, abrir el archivo <code>.html</code> dentro de WhatsApp o Archivos bloquea todos los botones por seguridad de Apple. Abre la aplicación mediante su <strong>enlace web en Safari</strong> para poder editar y sincronizar.
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="brand-back">
+        <span class="status-dot" id="dbDot" title="Conectado por Internet"></span>
+        <span>tricount hogar</span>
+      </div>
+      <div class="top-actions">
+        <div class="month-nav" title="Cambiar de mes (Cada mes guarda sus propios valores)">
+          <button type="button" class="month-step-btn" onclick="stepMonth(-1)" title="Mes anterior">‹</button>
+          <select id="monthPicker" class="month-pill" aria-label="Seleccionar mes"></select>
+          <button type="button" class="month-step-btn" onclick="stepMonth(1)" title="Mes siguiente">›</button>
+        </div>
+        <button class="icon-btn" id="searchToggleBtn" title="Buscar gasto">🔍</button>
+        <button class="icon-btn" id="installPwaBtn" style="display:none;" title="Instalar en celular">📲</button>
+        <button class="icon-btn" id="settingsBtn" title="Configuración y Sincronización por Internet">•••</button>
+      </div>
+    </div>
+
+    <!-- Centered Tricount Hero -->
+    <div class="hero-header">
+      <div class="hero-icon">🌆</div>
+      <div class="hero-title" id="coupleTitle">Hogar en Pareja</div>
+      <div class="hero-subtitle" id="dbStatusText">☁️ Sincronizando automáticamente por Internet...</div>
+      <div class="month-badge-banner" id="activeMonthBanner">📅 Presupuesto independiente de Noviembre 2026</div>
+    </div>
+
+    <!-- Segmented Tabs -->
+    <div class="segmented-control">
+      <button class="seg-btn active" onclick="switchTab('gastos', this)">Gastos</button>
+      <button class="seg-btn" onclick="switchTab('balances', this)">Balances</button>
+      <button class="seg-btn" onclick="switchTab('rubros', this)">Rubros</button>
+      <button class="seg-btn" onclick="switchTab('analisis', this)">Análisis</button>
+    </div>
+
+    <!-- Search Input (Togglable) -->
+    <div class="search-box" id="searchBox">
+      <input type="text" id="searchFilter" class="search-input" placeholder="Buscar gasto, rubro, segmento o persona..." />
+    </div>
+
+    <!-- VIEW 1: GASTOS (Expenses) -->
+    <div id="view-gastos" class="view-section active">
+      <div class="summary-strip">
+        <div class="summary-col">
+          <div class="lbl">Gastado en el Mes</div>
+          <div class="val" id="sumSpent">$0</div>
+          <div class="sub-hint" id="sumRemainingHint" style="color:var(--green);">Quedan $0</div>
+        </div>
+        <div class="summary-col editable" onclick="openMonthlyBudgetModal()" title="Toca para modificar el presupuesto de este mes">
+          <div class="lbl">Presupuesto del Mes ✏️</div>
+          <div class="val" id="sumBudget">$0</div>
+          <div class="sub-hint">Guardado para este mes</div>
+        </div>
+      </div>
+
+      <div id="expensesGroupedList"></div>
+    </div>
+
+    <!-- VIEW 2: BALANCES (Who owes whom) -->
+    <div id="view-balances" class="view-section">
+      <div class="balance-banner">
+        <div class="balance-emoji" id="balanceEmoji">🤑</div>
+        <div class="tc-info">
+          <div class="tc-title" id="balanceHeadline">Están a paz y salvo</div>
+          <div class="tc-sub" id="balanceSubline">Todos los gastos compartidos están equilibrados</div>
+        </div>
+      </div>
+
+      <button class="reimburse-btn-card" onclick="openExpenseModal()">
+        + Registrar Nuevo Gasto Compartido
+      </button>
+
+      <div class="group-header">
+        <span>Balances</span>
+        <span class="sub">Aportes 50/50 del mes</span>
+      </div>
+
+      <div class="card-list" id="balancesList"></div>
+    </div>
+
+    <!-- VIEW 3: RUBROS Y SEGMENTOS (Monthly Budgets) -->
+    <div id="view-rubros" class="view-section">
+      <div class="summary-strip">
+        <div class="summary-col editable" onclick="openMonthlyBudgetModal()" title="Toca para modificar lo disponible de este mes">
+          <div class="lbl">Disponible del Mes ✏️</div>
+          <div class="val" id="rubrosRemaining">$0</div>
+          <div class="sub-hint" id="monthlyBaseLabel">De $0 (Toca para editar)</div>
+        </div>
+        <div class="summary-col editable" onclick="openNewRubroModal()">
+          <div class="lbl">Suma de Rubros</div>
+          <div class="val" id="rubrosSumVal">$0</div>
+          <div class="sub-hint" id="rubrosCount">0 rubros (+ Nuevo)</div>
+        </div>
+      </div>
+
+      <button class="reimburse-btn-card" onclick="openNewRubroModal()">
+        + Crear Nuevo Rubro en este Mes
+      </button>
+
+      <div style="font-size:0.76rem;color:var(--text-secondary);text-align:center;margin-bottom:0.5rem;">
+        💡 Los valores de cada rubro se guardan por separado para cada mes. Toca un rubro o <strong>✏️</strong> para editarlo.
+      </div>
+
+      <div id="rubrosGroupedList"></div>
+    </div>
+
+    <!-- VIEW 4: ANÁLISIS DEL MES -->
+    <div id="view-analisis" class="view-section">
+      <div class="chart-card" style="border:1px solid rgba(33,163,102,0.45);background:linear-gradient(180deg,rgba(16,124,65,0.18) 0%,var(--card) 100%);">
+        <div class="group-header" style="margin-top:0;">
+          <span style="color:#30d158;">📊 Excel Dashboard Bidireccional</span>
+          <span class="sub" id="excelSyncBadge">Listo para vincular</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+          Vincula el archivo Excel para que se actualice solo cada vez que ingreses gastos aquí, y si modificas presupuestos o gastos dentro del Excel y guardas (Ctrl+G), los cambios se reflejen aquí automáticamente.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          <button type="button" class="primary-btn" style="margin:0;background:linear-gradient(135deg,#107c41 0%,#21a366 100%);" onclick="linkLiveExcelFile()">
+            🔗 1. Vincular / Crear Excel en Vivo (Sincronización Automática)
+          </button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+            <button type="button" class="reimburse-btn-card" style="margin:0;" onclick="downloadExcelDashboard()">
+              📥 Descargar Excel
+            </button>
+            <button type="button" class="reimburse-btn-card" style="margin:0;color:var(--green);border-color:rgba(48,209,88,0.3);" onclick="document.getElementById('excelUploadInput').click()">
+              📤 Subir Excel Editado
+            </button>
+          </div>
+          <input type="file" id="excelUploadInput" accept=".xls,.xlsx,.html,.htm,.xml" style="display:none;" onchange="handleExcelFileUpload(event)" />
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="group-header" style="margin-top:0;">
+          <span>Ritmo Día a Día</span>
+          <span class="sub" id="dailyAvgLabel">Promedio: $0/día</span>
+        </div>
+        <div class="daily-chart" id="dailyChart"></div>
+      </div>
+
+      <div class="group-header">
+        <span style="color:var(--orange);">🔄 Saldos Excedidos del Mes Anterior (Arrastre y Comparativo)</span>
+      </div>
+      <div class="card-list" id="analysisCarryover"></div>
+
+      <div class="group-header">
+        <span style="color:var(--red);">⚠️ Gastando MÁS del presupuesto (Quién gastó de más)</span>
+      </div>
+      <div class="card-list" id="analysisOver"></div>
+
+      <div class="group-header">
+        <span style="color:var(--green);">✅ Gastando MENOS (Ahorro / Margen)</span>
+      </div>
+      <div class="card-list" id="analysisUnder"></div>
+
+      <div class="group-header">
+        <span style="color:var(--purple);">📌 Faltó meter / Sin movimientos</span>
+      </div>
+      <div class="card-list" id="analysisMissing"></div>
+    </div>
+  </div>
+
+  <!-- Floating Bottom "+" Button -->
+  <div class="floating-dock">
+    <button class="fab-group" id="fabBtn" onclick="handleFabClick()">
+      <div class="fab-circle">+</div>
+      <div class="fab-label" id="fabLabel">Agregar Gasto</div>
+    </button>
+  </div>
+
+  <!-- MODAL 1: ADD EXPENSE -->
+  <div class="modal-backdrop" id="expenseModal">
+    <div class="modal-sheet">
+      <div class="sheet-header">
+        <h3>Nuevo Gasto</h3>
+        <button class="sheet-close" onclick="closeModals()">✕</button>
+      </div>
+
+      <div class="field-group">
+        <label>Elige el Rubro con un toque</label>
+        <div class="chip-grid" id="rubroChips"></div>
+        <select id="expRubro" class="field-input" required></select>
+      </div>
+
+      <form id="expenseForm">
+        <div class="field-group">
+          <label>¿En qué gastaron? (Ingresa todo lo que quieras)</label>
+          <input type="text" id="expDesc" class="field-input" placeholder="Ej. Mercado supermercado, cena, recibo luz..." required />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>Monto ($)</label>
+            <input type="number" id="expAmount" class="field-input" min="0.01" step="any" placeholder="45000" required />
+          </div>
+          <div class="field-group">
+            <label>Fecha</label>
+            <input type="date" id="expDate" class="field-input" required />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Pagado por</label>
+          <select id="expPayer" class="field-input"></select>
+        </div>
+
+        <button type="submit" class="primary-btn">Guardar Gasto</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADD / EDIT RUBRO & SEGMENT -->
+  <div class="modal-backdrop" id="rubroModal">
+    <div class="modal-sheet">
+      <div class="sheet-header">
+        <h3 id="rubroModalTitle">Nuevo Rubro o Segmento</h3>
+        <button class="sheet-close" onclick="closeModals()">✕</button>
+      </div>
+
+      <form id="rubroForm">
+        <input type="hidden" id="rubroEditId" value="" />
+        <div class="field-group">
+          <label>Segmento (Ej. Hogar Fijo, Alimentación, Ocio, Ahorro)</label>
+          <input type="text" id="rubroSegment" class="field-input" placeholder="Ej. Hogar Fijo" required />
+        </div>
+        <div class="field-group">
+          <label>Nombre del Rubro</label>
+          <input type="text" id="rubroName" class="field-input" placeholder="Ej. Mercado Casa" required />
+        </div>
+        <div class="field-group">
+          <label id="rubroBudgetLabel">Cantidad / Presupuesto en este Mes ($)</label>
+          <input type="number" id="rubroBudget" class="field-input" min="0" step="any" placeholder="600000" required />
+        </div>
+        <button type="submit" class="primary-btn">Guardar en este Mes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: EDIT MONTHLY AVAILABLE BUDGET ("Disponible del Mes") -->
+  <div class="modal-backdrop" id="monthlyBudgetModal">
+    <div class="modal-sheet">
+      <div class="sheet-header">
+        <h3 id="monthlyModalTitle">Presupuesto Disponible del Mes</h3>
+        <button class="sheet-close" onclick="closeModals()">✕</button>
+      </div>
+
+      <form id="monthlyBudgetForm">
+        <div class="field-group">
+          <label>Presupuesto Total Disponible para este Mes ($)</label>
+          <input type="number" id="customMonthlyInput" class="field-input" min="0" step="any" placeholder="Ej. 3500000" required />
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.85rem;" id="monthlyBudgetHelper">
+          Este valor se guardará exclusivamente para el mes seleccionado.
+        </div>
+        <button type="submit" class="primary-btn">Guardar Presupuesto de este Mes</button>
+        <button type="button" class="secondary-btn" onclick="useAutoSumBudget()">Usar Suma Automática de los Rubros del Mes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: SETTINGS / COUPLE NAMES & CLOUD SYNC -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-sheet">
+      <div class="sheet-header">
+        <h3>Pareja y Sincronización por Internet</h3>
+        <button class="sheet-close" onclick="closeModals()">✕</button>
+      </div>
+
+      <form id="settingsForm">
+        <div class="field-row">
+          <div class="field-group">
+            <label>Persona 1</label>
+            <input type="text" id="partner1Input" class="field-input" required />
+          </div>
+          <div class="field-group">
+            <label>Persona 2</label>
+            <input type="text" id="partner2Input" class="field-input" required />
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Código Privado de Nube (mismo código en ambos celulares y PC)</label>
+          <input type="text" id="cloudChannelInput" class="field-input" required />
+        </div>
+        <button type="submit" class="primary-btn">Guardar Configuración</button>
+      </form>
+
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:0.6rem;">
+        <button type="button" class="primary-btn" style="margin:0;background:linear-gradient(135deg,#107c41 0%,#21a366 100%);color:#fff;" onclick="downloadExcelDashboard()">📊 Descargar Informe Dashboard en Excel</button>
+        <button type="button" class="primary-btn" style="margin:0;background:var(--green);color:#000;" onclick="syncCloudNow(true)">☁️ Sincronizar por Internet Ahora</button>
+        <button type="button" class="reimburse-btn-card" style="margin:0;" onclick="downloadPortableApp()">📲 Descargar App Portátil para Celular</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+          <button type="button" class="reimburse-btn-card" style="margin:0;" onclick="exportBackup()">💾 Exportar JSON</button>
+          <button type="button" class="reimburse-btn-card" style="margin:0;" onclick="document.getElementById('importFileInput').click()">📂 Importar JSON</button>
+        </div>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importAndMergeBackup(event)" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Ocultar aviso de QuickLook inmediatamente cuando JavaScript está activo
+    (function() {
+      var warn = document.getElementById('iosJsWarning');
+      if (warn) warn.style.display = 'none';
+    })();
+
+    function deepClone(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function safeGetStorage(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function safeSetStorage(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
+    const STORAGE_KEY = 'finanzas_pareja_v4';
+    const CLOUD_CHANNEL_KEY = 'finanzas_cloud_channel';
+    const DEFAULT_CLOUD_CHANNEL = 'finanzas_hogar_miguel_tania_7f4a52c1';
+    const DEVICE_ID = 'dev_' + Math.random().toString(36).slice(2, 9);
+    let currentTab = 'gastos';
+    let cloudConnected = false;
+    let pcConnected = false;
+    let liveEventSource = null;
+
+    const defaultRubrosTemplate = [
+      { id: 'r2', segment: 'Hogar Fijo', name: 'Servicios (Luz, Agua, Internet)', budget: 300000 },
+      { id: 'r3', segment: 'Alimentación', name: 'Mercado Casa', budget: 800000 },
+      { id: 'r4', segment: 'Ocio y Pareja', name: 'Salidas y Restaurantes', budget: 350000 },
+      { id: 'r5', segment: 'Transporte', name: 'Transporte / Gasolina', budget: 250000 },
+      { id: 'r6', segment: 'Ahorro', name: 'Fondo del Hogar', budget: 400000 },
+      { id: 'r_1795045044333', segment: 'Hogar fijo', name: 'Mecato', budget: 70000 }
+    ];
+
+    const defaultData = {
+      partners: ['Miguel', 'Tania'],
+      updatedAt: 1795045044333,
+      deletedIds: [],
+      rubros: deepClone(defaultRubrosTemplate),
+      customMonthlyBudget: null,
+      monthlyConfigs: {
+        '2026-11': {
+          updatedAt: 1795045044333,
+          rubros: deepClone(defaultRubrosTemplate),
+          customMonthlyBudget: null
+        }
+      },
+      expenses: []
+    };
+
+    let state = deepClone(defaultData);
+
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('installPwaBtn');
+      btn.style.display = 'flex';
+      btn.onclick = async () => {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        btn.style.display = 'none';
+      };
+    });
+
+    function getCloudChannel() {
+      return (safeGetStorage(CLOUD_CHANNEL_KEY) || DEFAULT_CLOUD_CHANNEL).trim();
+    }
+
+    function getCategoryIcon(text) {
+      const t = (text || '').toLowerCase();
+      if (t.includes('arriendo') || t.includes('casa') || t.includes('hogar') || t.includes('hipoteca')) return '🏠';
+      if (t.includes('mercado') || t.includes('aliment') || t.includes('comida') || t.includes('super')) return '🛒';
+      if (t.includes('mecato') || t.includes('dulce') || t.includes('antojo') || t.includes('snack')) return '🍫';
+      if (t.includes('servicio') || t.includes('luz') || t.includes('agua') || t.includes('internet')) return '💡';
+      if (t.includes('salida') || t.includes('restaurante') || t.includes('ocio') || t.includes('cita')) return '🍽️';
+      if (t.includes('transporte') || t.includes('gasolina') || t.includes('carro') || t.includes('moto')) return '🚗';
+      if (t.includes('ahorro') || t.includes('fondo') || t.includes('meta')) return '💰';
+      if (t.includes('salud') || t.includes('farmacia') || t.includes('médico')) return '💊';
+      if (t.includes('mascota') || t.includes('perro') || t.includes('gato')) return '🐾';
+      return '💳';
+    }
+
+    function fmtMoney(n) {
+      return '$' + Number(n || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+    }
+
+    function fmtPrettyDate(dateStr) {
+      if (!dateStr) return 'Sin fecha';
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      return dateObj.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function fmtMonthName(ym) {
+      if (!ym) return '';
+      const [y, m] = ym.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, 1);
+      const str = dateObj.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function getPrevMonthStr(ym) {
+      const [y, m] = ym.split('-').map(Number);
+      const d = new Date(y, m - 2, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    // Calcula quién gastó cuánto en una lista de gastos
+    function computePartnerSplit(expensesList) {
+      const p1Name = state.partners[0] || 'Persona 1';
+      const p2Name = state.partners[1] || 'Persona 2';
+      let p1 = 0;
+      let p2 = 0;
+      expensesList.forEach(e => {
+        const amt = Number(e.amount || 0);
+        if (e.payer === p1Name) p1 += amt;
+        else if (e.payer === p2Name) p2 += amt;
+        else {
+          p1 += amt / 2;
+          p2 += amt / 2;
+        }
+      });
+      let whoMore = 'Ambos por igual (50/50)';
+      if (p1 > p2 + 0.5) whoMore = `${p1Name} (${fmtMoney(p1)} vs ${fmtMoney(p2)})`;
+      else if (p2 > p1 + 0.5) whoMore = `${p2Name} (${fmtMoney(p2)} vs ${fmtMoney(p1)})`;
+      return { p1Name, p2Name, p1, p2, whoMore };
+    }
+
+    // Calcula los excesos del mes anterior (SOLO aplica donde se haya gastado de más) para arrastrar y comparar en el mes siguiente
+    function getPrevMonthOverages(currentYm) {
+      const prevYm = getPrevMonthStr(currentYm);
+      const hasPrevData = (state.monthlyConfigs && state.monthlyConfigs[prevYm]) ||
+        state.expenses.some(e => e.date && e.date.startsWith(prevYm));
+      if (!hasPrevData) return { prevYm, items: [], totalExcess: 0 };
+
+      const prevConfig = getMonthConfig(prevYm);
+      const prevExpenses = state.expenses.filter(e => e.date && e.date.startsWith(prevYm));
+      const items = [];
+      let totalExcess = 0;
+
+      (prevConfig.rubros || []).forEach(pr => {
+        const rExps = prevExpenses.filter(e => e.rubroId === pr.id);
+        const spent = rExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+        const budget = Number(pr.budget || 0);
+        if (spent > budget) {
+          const excess = spent - budget;
+          totalExcess += excess;
+          const split = computePartnerSplit(rExps);
+          items.push({
+            id: pr.id,
+            name: pr.name,
+            segment: pr.segment,
+            prevBudget: budget,
+            prevSpent: spent,
+            excess,
+            whoMore: split.whoMore,
+            p1: split.p1,
+            p2: split.p2
+          });
+        }
+      });
+
+      return { prevYm, items, totalExcess };
+    }
+
+    function getMonthConfig(ym) {
+      if (!state.monthlyConfigs) {
+        state.monthlyConfigs = {};
+      }
+      if (!state.monthlyConfigs[ym]) {
+        const existingMonths = Object.keys(state.monthlyConfigs).sort();
+        let sourceRubros = state.rubros && state.rubros.length ? state.rubros : defaultRubrosTemplate;
+        let sourceCustomBudget = state.customMonthlyBudget !== undefined ? state.customMonthlyBudget : null;
+
+        if (existingMonths.length > 0) {
+          const prevMonths = existingMonths.filter(m => m < ym);
+          const refMonth = prevMonths.length > 0 ? prevMonths[prevMonths.length - 1] : existingMonths[existingMonths.length - 1];
+          sourceRubros = state.monthlyConfigs[refMonth].rubros;
+          sourceCustomBudget = state.monthlyConfigs[refMonth].customMonthlyBudget;
+        }
+
+        state.monthlyConfigs[ym] = {
+          updatedAt: Date.now(),
+          rubros: deepClone(sourceRubros),
+          customMonthlyBudget: sourceCustomBudget
+        };
+      }
+      return state.monthlyConfigs[ym];
+    }
+
+    // Fusión inteligente multi-dispositivo (Celulares + Nube + PC) respetando ediciones y eliminaciones
+    function mergeStates(localSt, remoteSt) {
+      if (!remoteSt) return localSt;
+      if (!localSt) return remoteSt;
+
+      const localTime = Number(localSt.updatedAt || 0);
+      const remoteTime = Number(remoteSt.updatedAt || 0);
+      const newer = remoteTime >= localTime ? remoteSt : localSt;
+
+      const deletedSet = new Set([
+        ...(localSt.deletedIds || []),
+        ...(remoteSt.deletedIds || [])
+      ]);
+
+      // Unir configuraciones de cada mes tomando la más reciente de cada mes y filtrando rubros eliminados
+      const allMonths = new Set([
+        ...Object.keys(localSt.monthlyConfigs || {}),
+        ...Object.keys(remoteSt.monthlyConfigs || {})
+      ]);
+      const mergedConfigs = {};
+      allMonths.forEach(ym => {
+        const lm = (localSt.monthlyConfigs || {})[ym];
+        const rm = (remoteSt.monthlyConfigs || {})[ym];
+        let chosen;
+        if (lm && rm) {
+          chosen = Number(rm.updatedAt || 0) >= Number(lm.updatedAt || 0) ? deepClone(rm) : deepClone(lm);
+          // También unir cualquier rubro nuevo creado en el otro dispositivo que no haya sido eliminado
+          const other = chosen === rm ? lm : rm;
+          const existingIds = new Set((chosen.rubros || []).map(r => r.id));
+          (other.rubros || []).forEach(r => {
+            if (!existingIds.has(r.id) && !deletedSet.has(r.id)) {
+              chosen.rubros.push(r);
+            }
+          });
+        } else {
+          chosen = deepClone(lm || rm);
+        }
+        chosen.rubros = (chosen.rubros || []).filter(r => !deletedSet.has(r.id));
+        mergedConfigs[ym] = chosen;
+      });
+
+      // Unir todos los gastos de ambos dispositivos excepto los eliminados
+      const expMap = new Map();
+      (remoteSt.expenses || []).forEach(e => {
+        if (!deletedSet.has(e.id)) expMap.set(e.id, e);
+      });
+      (localSt.expenses || []).forEach(e => {
+        if (!deletedSet.has(e.id)) expMap.set(e.id, e);
+      });
+
+      return {
+        partners: newer.partners || ['Miguel', 'Tania'],
+        updatedAt: Math.max(localTime, remoteTime, Date.now()),
+        deletedIds: Array.from(deletedSet),
+        rubros: (newer.rubros || defaultRubrosTemplate).filter(r => !deletedSet.has(r.id)),
+        customMonthlyBudget: newer.customMonthlyBudget !== undefined ? newer.customMonthlyBudget : null,
+        monthlyConfigs: mergedConfigs,
+        expenses: Array.from(expMap.values()).sort((a, b) => b.date.localeCompare(a.date))
+      };
+    }
+
+    async function pullFromCloud() {
+      const channel = getCloudChannel();
+      const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}/json?poll=1`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Error al conectar con la nube');
+      const text = await res.text();
+      const lines = text.trim().split('\n').filter(Boolean);
+      let latestRemote = null;
+      for (const line of lines) {
+        try {
+          const msg = JSON.parse(line);
+          if (msg.event === 'message' && msg.message) {
+            const payload = JSON.parse(msg.message);
+            if (payload && payload.partners && payload.monthlyConfigs) {
+              latestRemote = mergeStates(latestRemote, payload);
+            }
+          }
+        } catch (e) {}
+      }
+      return latestRemote;
+    }
+
+    async function pushToCloud() {
+      const channel = getCloudChannel();
+      const payload = JSON.stringify({ ...state, _sender: DEVICE_ID });
+      const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}`, {
+        method: 'POST',
+        body: payload
+      });
+      if (res.ok) {
+        cloudConnected = true;
+      }
+    }
+
+    function startLiveCloudListener() {
+      try {
+        if (liveEventSource) liveEventSource.close();
+        const channel = getCloudChannel();
+        liveEventSource = new EventSource(`https://ntfy.sh/${encodeURIComponent(channel)}/sse`);
+        liveEventSource.onopen = () => {
+          cloudConnected = true;
+          updateConnectionLabel();
+        };
+        liveEventSource.onmessage = async (evt) => {
+          try {
+            const data = JSON.parse(evt.data);
+            if (data.event === 'message' && data.message) {
+              const incoming = JSON.parse(data.message);
+              if (incoming && incoming._sender !== DEVICE_ID && incoming.partners) {
+                state = mergeStates(state, incoming);
+                safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+                await syncLocalPcSilent();
+                renderAll();
+              }
+            }
+          } catch (e) {}
+        };
+      } catch (e) {}
+    }
+
+    async function syncLocalPcSilent() {
+      if (!location.protocol.startsWith('http')) return;
+      try {
+        const asciiSafeJson = JSON.stringify(state, null, 2).replace(/[\u007F-\uFFFF]/g, (chr) =>
+          '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4)
+        );
+        const res = await fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: asciiSafeJson
+        });
+        if (res.ok) pcConnected = true;
+      } catch (e) {}
+    }
+
+    function updateConnectionLabel() {
+      const dot = document.getElementById('dbDot');
+      const sub = document.getElementById('dbStatusText');
+      if (cloudConnected && pcConnected) {
+        dot.style.background = 'var(--green)';
+        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • ☁️ Nube por Internet + 💻 Base de Datos en PC`;
+      } else if (cloudConnected) {
+        dot.style.background = 'var(--green)';
+        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • ☁️ Conectado por Internet (Nube Activa)`;
+      } else if (pcConnected) {
+        dot.style.background = 'var(--green)';
+        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • 💻 Base de Datos en PC`;
+      } else {
+        dot.style.background = 'var(--blue)';
+        sub.textContent = `${state.partners[0]} & ${state.partners[1]} • 📱 Guardado en Celular (Se sincroniza al tener internet)`;
+      }
+    }
+
+    async function initState() {
+      // 1. Cargar datos guardados en el dispositivo
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('finanzas_pareja_v3') || localStorage.getItem('finanzas_pareja_v2');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          state = mergeStates(state, parsed);
+        }
+      } catch (e) {}
+
+      // 2. Si estamos en el PC (http://localhost:8080), cargar y unir con base-de-datos.json del PC
+      if (location.protocol.startsWith('http')) {
+        try {
+          const res = await fetch('/api/state', { cache: 'no-store' });
+          if (res.ok) {
+            const pcData = await res.json();
+            state = mergeStates(state, pcData);
+            pcConnected = true;
+          }
+        } catch (e) {}
+      }
+
+      renderAll();
+
+      // 3. Conectar automáticamente por Internet con la Nube (funciona desde cualquier red Wi-Fi o datos móviles 4G/5G)
+      try {
+        const cloudData = await pullFromCloud();
+        cloudConnected = true;
+        if (cloudData) {
+          state = mergeStates(state, cloudData);
+        }
+        // Publicar estado actualizado en la nube para mantenerla fresca y guardar en PC si está abierto
+        await pushToCloud();
+        await syncLocalPcSilent();
+        safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+
+      renderAll();
+      startLiveCloudListener();
+    }
+
+    async function saveState(skipExcelWrite) {
+      state.updatedAt = Date.now();
+      safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+      renderAll();
+
+      // Guardar en PC local si está disponible
+      await syncLocalPcSilent();
+
+      // Actualizar automáticamente el archivo Excel vinculado cuando se ingresan gastos o cambios en la app
+      if (!skipExcelWrite) {
+        await writeLiveExcelFileSilent();
+      }
+
+      // Guardar y transmitir por Internet a la Nube automáticamente
+      try {
+        await pushToCloud();
+      } catch (e) {}
+      updateConnectionLabel();
+    }
+
+    window.syncCloudNow = async function(showAlert) {
+      const chInput = document.getElementById('cloudChannelInput');
+      if (chInput && chInput.value.trim()) {
+        safeSetStorage(CLOUD_CHANNEL_KEY, chInput.value.trim());
+      }
+      try {
+        const cloudData = await pullFromCloud();
+        if (cloudData) {
+          state = mergeStates(state, cloudData);
+        }
+        await pushToCloud();
+        await syncLocalPcSilent();
+        safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+        cloudConnected = true;
+        renderAll();
+        startLiveCloudListener();
+        if (showAlert) {
+          alert('☁️ ¡Sincronización por Internet completada! Tus datos están actualizados en la nube para ambos celulares y el computador.');
+          closeModals();
+        }
+      } catch (err) {
+        if (showAlert) {
+          alert('⚠️ No se detectó conexión a internet en este momento. Tus cambios siguen guardados en tu teléfono y se subirán automáticamente apenas tengas señal.');
+        }
+      }
+    };
+
+    window.downloadPortableApp = function() {
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Finanzas-Hogar-Celular.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    window.importAndMergeBackup = function(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          state = mergeStates(state, imported);
+          await saveState();
+          alert('✅ Datos importados y unidos correctamente.');
+          closeModals();
+        } catch (err) {
+          alert('Archivo JSON inválido.');
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    function ensureMonthOption(ym) {
+      const picker = document.getElementById('monthPicker');
+      if (!picker) return;
+      let exists = false;
+      for (let i = 0; i < picker.options.length; i++) {
+        if (picker.options[i].value === ym) { exists = true; break; }
+      }
+      if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = ym;
+        opt.textContent = fmtMonthName(ym);
+        picker.appendChild(opt);
+      }
+    }
+
+    function populateMonthSelect(centerYm) {
+      const picker = document.getElementById('monthPicker');
+      if (!picker) return;
+      picker.innerHTML = '';
+      for (let y = 2025; y <= 2028; y++) {
+        for (let m = 1; m <= 12; m++) {
+          const ym = `${y}-${String(m).padStart(2, '0')}`;
+          const opt = document.createElement('option');
+          opt.value = ym;
+          opt.textContent = fmtMonthName(ym);
+          picker.appendChild(opt);
+        }
+      }
+      ensureMonthOption(centerYm);
+      picker.value = centerYm;
+    }
+
+    window.stepMonth = function(delta) {
+      const picker = document.getElementById('monthPicker');
+      const [y, m] = picker.value.split('-').map(Number);
+      const d = new Date(y, m - 1 + delta, 1);
+      const nextYm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      ensureMonthOption(nextYm);
+      picker.value = nextYm;
+      syncExpenseDefaultDate(nextYm);
+      saveState();
+    };
+
+    function syncExpenseDefaultDate(ym) {
+      const now = new Date();
+      const thisYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      if (ym === thisYm) {
+        document.getElementById('expDate').value = `${thisYm}-${String(now.getDate()).padStart(2, '0')}`;
+      } else {
+        document.getElementById('expDate').value = `${ym}-01`;
+      }
+    }
+
+    window.switchTab = function(tab, btn) {
+      currentTab = tab;
+      document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(`view-${tab}`).classList.add('active');
+
+      const fabLabel = document.getElementById('fabLabel');
+      fabLabel.textContent = tab === 'rubros' ? 'Nuevo Rubro' : 'Agregar Gasto';
+    };
+
+    window.handleFabClick = function() {
+      if (currentTab === 'rubros') {
+        openNewRubroModal();
+      } else {
+        openExpenseModal();
+      }
+    };
+
+    window.openExpenseModal = function() {
+      document.getElementById('expenseModal').classList.add('open');
+      setTimeout(() => document.getElementById('expDesc').focus(), 100);
+    };
+
+    window.openNewRubroModal = function() {
+      const ym = document.getElementById('monthPicker').value;
+      document.getElementById('rubroModalTitle').textContent = `Nuevo Rubro (${fmtMonthName(ym)})`;
+      document.getElementById('rubroEditId').value = '';
+      document.getElementById('rubroSegment').value = '';
+      document.getElementById('rubroName').value = '';
+      document.getElementById('rubroBudget').value = '';
+      document.getElementById('rubroModal').classList.add('open');
+      setTimeout(() => document.getElementById('rubroSegment').focus(), 100);
+    };
+
+    window.openEditRubroModal = function(id) {
+      const ym = document.getElementById('monthPicker').value;
+      const mConfig = getMonthConfig(ym);
+      const r = mConfig.rubros.find(item => item.id === id);
+      if (!r) return;
+      document.getElementById('rubroModalTitle').textContent = `Editar en ${fmtMonthName(ym)}: ${r.name}`;
+      document.getElementById('rubroEditId').value = r.id;
+      document.getElementById('rubroSegment').value = r.segment;
+      document.getElementById('rubroName').value = r.name;
+      document.getElementById('rubroBudget').value = r.budget;
+      document.getElementById('rubroModal').classList.add('open');
+      setTimeout(() => {
+        try {
+          const input = document.getElementById('rubroBudget');
+          input.focus();
+          if (input.select) input.select();
+        } catch (e) {}
+      }, 100);
+    };
+
+    window.openMonthlyBudgetModal = function() {
+      const ym = document.getElementById('monthPicker').value;
+      const mConfig = getMonthConfig(ym);
+      const sumRubros = mConfig.rubros.reduce((acc, r) => acc + Number(r.budget || 0), 0);
+      const effectiveBudget = (mConfig.customMonthlyBudget !== null && mConfig.customMonthlyBudget !== undefined)
+        ? Number(mConfig.customMonthlyBudget)
+        : sumRubros;
+      document.getElementById('monthlyModalTitle').textContent = `Presupuesto de ${fmtMonthName(ym)}`;
+      document.getElementById('customMonthlyInput').value = effectiveBudget;
+      document.getElementById('monthlyBudgetHelper').textContent =
+        `La suma de los rubros de ${fmtMonthName(ym)} es ${fmtMoney(sumRubros)}. Este presupuesto se guardará únicamente para ${fmtMonthName(ym)}.`;
+      document.getElementById('monthlyBudgetModal').classList.add('open');
+      setTimeout(() => {
+        try {
+          const input = document.getElementById('customMonthlyInput');
+          input.focus();
+          if (input.select) input.select();
+        } catch (e) {}
+      }, 100);
+    };
+
+    window.useAutoSumBudget = function() {
+      const ym = document.getElementById('monthPicker').value;
+      const mConfig = getMonthConfig(ym);
+      mConfig.customMonthlyBudget = null;
+      mConfig.updatedAt = Date.now();
+      closeModals();
+      saveState();
+    };
+
+    document.getElementById('monthlyBudgetForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const ym = document.getElementById('monthPicker').value;
+      const mConfig = getMonthConfig(ym);
+      const val = parseFloat(document.getElementById('customMonthlyInput').value);
+      if (!isNaN(val) && val >= 0) {
+        mConfig.customMonthlyBudget = val;
+        mConfig.updatedAt = Date.now();
+        closeModals();
+        saveState();
+      }
+    });
+
+    window.closeModals = function() {
+      document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open'));
+    };
+
+    document.getElementById('searchToggleBtn').addEventListener('click', () => {
+      const box = document.getElementById('searchBox');
+      box.classList.toggle('open');
+      if (box.classList.contains('open')) {
+        document.getElementById('searchFilter').focus();
+      }
+    });
+
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      document.getElementById('partner1Input').value = state.partners[0];
+      document.getElementById('partner2Input').value = state.partners[1];
+      document.getElementById('cloudChannelInput').value = getCloudChannel();
+      document.getElementById('settingsModal').classList.add('open');
+    });
+
+    document.getElementById('settingsForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const p1 = document.getElementById('partner1Input').value.trim();
+      const p2 = document.getElementById('partner2Input').value.trim();
+      const ch = document.getElementById('cloudChannelInput').value.trim();
+      if (ch) safeSetStorage(CLOUD_CHANNEL_KEY, ch);
+      if (p1 && p2) {
+        state.partners = [p1, p2];
+        saveState();
+        closeModals();
+      }
+    });
+
+    window.exportBackup = function() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tricount-hogar-${monthPicker.value}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const todayStr = `${currentMonthStr}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const monthPicker = document.getElementById('monthPicker');
+    populateMonthSelect(currentMonthStr);
+    document.getElementById('expDate').value = todayStr;
+
+    monthPicker.addEventListener('change', () => {
+      syncExpenseDefaultDate(monthPicker.value);
+      saveState();
+    });
+    document.getElementById('searchFilter').addEventListener('input', renderAll);
+
+    window.selectRubroChip = function(id) {
+      document.getElementById('expRubro').value = id;
+      renderChips();
+    };
+
+    function renderChips() {
+      const ym = monthPicker.value;
+      const mConfig = getMonthConfig(ym);
+      const selectedId = document.getElementById('expRubro').value;
+      const chipsEl = document.getElementById('rubroChips');
+      chipsEl.innerHTML = mConfig.rubros.map(r => `
+        <button type="button" class="rubro-chip ${r.id === selectedId ? 'selected' : ''}" onclick="selectRubroChip('${r.id}')">
+          ${getCategoryIcon(r.name + ' ' + r.segment)} ${r.name}
+        </button>
+      `).join('');
+    }
+
+    document.getElementById('expRubro').addEventListener('change', renderChips);
+
+    document.getElementById('expenseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const date = document.getElementById('expDate').value;
+      const rubroId = document.getElementById('expRubro').value;
+      const amount = parseFloat(document.getElementById('expAmount').value) || 0;
+      const payer = document.getElementById('expPayer').value;
+      const desc = document.getElementById('expDesc').value.trim();
+
+      if (!rubroId || amount <= 0) return;
+
+      state.expenses.push({
+        id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        date,
+        rubroId,
+        amount,
+        payer,
+        desc
+      });
+
+      document.getElementById('expAmount').value = '';
+      document.getElementById('expDesc').value = '';
+      closeModals();
+      saveState();
+    });
+
+    document.getElementById('rubroForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const ym = monthPicker.value;
+      const mConfig = getMonthConfig(ym);
+      const editId = document.getElementById('rubroEditId').value;
+      const segment = document.getElementById('rubroSegment').value.trim();
+      const name = document.getElementById('rubroName').value.trim();
+      const budget = parseFloat(document.getElementById('rubroBudget').value) || 0;
+
+      if (editId) {
+        const target = mConfig.rubros.find(r => r.id === editId);
+        if (target) {
+          target.segment = segment;
+          target.name = name;
+          target.budget = budget;
+        }
+      } else {
+        const existing = mConfig.rubros.find(r => r.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+          existing.segment = segment;
+          existing.budget = budget;
+        } else {
+          mConfig.rubros.push({
+            id: 'r_' + Date.now(),
+            segment,
+            name,
+            budget
+          });
+        }
+      }
+
+      mConfig.updatedAt = Date.now();
+      document.getElementById('rubroEditId').value = '';
+      document.getElementById('rubroName').value = '';
+      document.getElementById('rubroBudget').value = '';
+      closeModals();
+      saveState();
+    });
+
+    window.deleteExpense = function(id) {
+      if (!state.deletedIds) state.deletedIds = [];
+      state.deletedIds.push(id);
+      state.expenses = state.expenses.filter(e => e.id !== id);
+      saveState();
+    };
+
+    window.deleteRubro = function(id, evt) {
+      if (evt) evt.stopPropagation();
+      const ym = monthPicker.value;
+      if (!confirm(`¿Eliminar este rubro de ${fmtMonthName(ym)}?`)) return;
+      const mConfig = getMonthConfig(ym);
+      mConfig.rubros = mConfig.rubros.filter(r => r.id !== id);
+      mConfig.updatedAt = Date.now();
+      saveState();
+    };
+
+    function renderAll() {
+      const selectedMonth = monthPicker.value;
+      const mConfig = getMonthConfig(selectedMonth);
+      const activeRubros = mConfig.rubros;
+      const monthExpenses = state.expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
+      const rubroMap = Object.fromEntries(activeRubros.map(r => [r.id, r]));
+
+      updateConnectionLabel();
+      document.getElementById('activeMonthBanner').textContent =
+        `📅 Valores guardados para ${fmtMonthName(selectedMonth)}`;
+
+      const rubroSelect = document.getElementById('expRubro');
+      const currentRubroVal = rubroSelect.value;
+      rubroSelect.innerHTML = activeRubros
+        .map(r => `<option value="${r.id}">${r.segment} — ${r.name}</option>`)
+        .join('');
+      if (currentRubroVal && activeRubros.some(r => r.id === currentRubroVal)) {
+        rubroSelect.value = currentRubroVal;
+      }
+      renderChips();
+
+      const payerSelect = document.getElementById('expPayer');
+      const currentPayer = payerSelect.value;
+      const payers = [...state.partners, 'Ambos (50/50)'];
+      payerSelect.innerHTML = payers.map(p => `<option value="${p}">${p}</option>`).join('');
+      if (currentPayer && payers.includes(currentPayer)) {
+        payerSelect.value = currentPayer;
+      }
+
+      const sumRubrosBudget = activeRubros.reduce((acc, r) => acc + Number(r.budget || 0), 0);
+      const totalBudget = (mConfig.customMonthlyBudget !== null && mConfig.customMonthlyBudget !== undefined)
+        ? Number(mConfig.customMonthlyBudget)
+        : sumRubrosBudget;
+      const totalSpent = monthExpenses.reduce((acc, e) => acc + Number(e.amount || 0), 0);
+      const remaining = totalBudget - totalSpent;
+
+      document.getElementById('sumSpent').textContent = fmtMoney(totalSpent);
+      document.getElementById('sumBudget').textContent = fmtMoney(totalBudget);
+
+      const remHintEl = document.getElementById('sumRemainingHint');
+      if (remaining >= 0) {
+        remHintEl.textContent = `Disponible: ${fmtMoney(remaining)}`;
+        remHintEl.style.color = 'var(--green)';
+      } else {
+        remHintEl.textContent = `Excedido: ${fmtMoney(Math.abs(remaining))}`;
+        remHintEl.style.color = 'var(--red)';
+      }
+
+      const remEl = document.getElementById('rubrosRemaining');
+      remEl.textContent = fmtMoney(remaining);
+      remEl.style.color = remaining < 0 ? 'var(--red)' : 'var(--green)';
+      document.getElementById('monthlyBaseLabel').textContent =
+        `Presupuesto ${fmtMonthName(selectedMonth)}: ${fmtMoney(totalBudget)}`;
+      document.getElementById('rubrosSumVal').textContent = fmtMoney(sumRubrosBudget);
+      document.getElementById('rubrosCount').textContent = `${activeRubros.length} rubros (+ Crear nuevo)`;
+
+      // 1. RENDER GASTOS GROUPED BY DATE
+      const query = document.getElementById('searchFilter').value.toLowerCase().trim();
+      const filteredExpenses = monthExpenses
+        .filter(e => {
+          if (!query) return true;
+          const r = rubroMap[e.rubroId];
+          const rText = r ? `${r.segment} ${r.name}`.toLowerCase() : '';
+          return (
+            e.desc.toLowerCase().includes(query) ||
+            e.payer.toLowerCase().includes(query) ||
+            rText.includes(query)
+          );
+        })
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      const expensesContainer = document.getElementById('expensesGroupedList');
+      if (filteredExpenses.length === 0) {
+        expensesContainer.innerHTML = `
+          <div class="empty-state">
+            <div style="font-size:2.2rem;margin-bottom:0.5rem;">🧾</div>
+            <div>No hay gastos en <strong>${fmtMonthName(selectedMonth)}</strong>.</div>
+            <div style="font-size:0.8rem;margin-top:0.3rem;">Toca el botón <strong>+ Agregar Gasto</strong> abajo para registrar en este mes.</div>
+          </div>
+        `;
+      } else {
+        const groups = {};
+        filteredExpenses.forEach(e => {
+          if (!groups[e.date]) groups[e.date] = [];
+          groups[e.date].push(e);
+        });
+
+        expensesContainer.innerHTML = Object.entries(groups).map(([date, items]) => {
+          const daySum = items.reduce((s, i) => s + Number(i.amount || 0), 0);
+          return `
+            <div class="group-header">
+              <span>${fmtPrettyDate(date)}</span>
+              <span class="sub">${fmtMoney(daySum)}</span>
+            </div>
+            <div class="card-list">
+              ${items.map(e => {
+                const r = rubroMap[e.rubroId] || { segment: 'General', name: 'Rubro anterior' };
+                const icon = getCategoryIcon(r.name + ' ' + r.segment + ' ' + e.desc);
+                return `
+                  <div class="tc-card">
+                    <div class="tc-left">
+                      <div class="tc-icon">${icon}</div>
+                      <div class="tc-info">
+                        <div class="tc-title">${e.desc}</div>
+                        <div class="tc-sub">Pagado por <strong>${e.payer}</strong> • ${r.name}</div>
+                      </div>
+                    </div>
+                    <div class="tc-right">
+                      <div class="tc-amount">${fmtMoney(e.amount)}</div>
+                      <button class="del-btn" onclick="deleteExpense('${e.id}')" title="Eliminar">✕</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. RENDER BALANCES
+      let p1Paid = 0;
+      let p2Paid = 0;
+      monthExpenses.forEach(e => {
+        if (e.payer === state.partners[0]) p1Paid += e.amount;
+        else if (e.payer === state.partners[1]) p2Paid += e.amount;
+        else {
+          p1Paid += e.amount / 2;
+          p2Paid += e.amount / 2;
+        }
+      });
+
+      const fairShare = totalSpent / 2;
+      const p1Balance = p1Paid - fairShare;
+      const p2Balance = p2Paid - fairShare;
+
+      const headlineEl = document.getElementById('balanceHeadline');
+      const sublineEl = document.getElementById('balanceSubline');
+      const emojiEl = document.getElementById('balanceEmoji');
+
+      if (Math.abs(p1Balance) < 1) {
+        emojiEl.textContent = '🤝';
+        headlineEl.textContent = 'Están a paz y salvo';
+        sublineEl.textContent = `Ambos han aportado lo mismo en ${fmtMonthName(selectedMonth)}`;
+      } else if (p1Balance > 0) {
+        emojiEl.textContent = '🤑';
+        headlineEl.textContent = `${state.partners[1]} le debe ${fmtMoney(p1Balance)} a ${state.partners[0]}`;
+        sublineEl.textContent = `Para equilibrar los gastos 50/50 de ${fmtMonthName(selectedMonth)}`;
+      } else {
+        emojiEl.textContent = '💸';
+        headlineEl.textContent = `${state.partners[0]} le debe ${fmtMoney(Math.abs(p1Balance))} a ${state.partners[1]}`;
+        sublineEl.textContent = `Para equilibrar los gastos 50/50 de ${fmtMonthName(selectedMonth)}`;
+      }
+
+      document.getElementById('balancesList').innerHTML = [
+        { name: state.partners[0], paid: p1Paid, bal: p1Balance },
+        { name: state.partners[1], paid: p2Paid, bal: p2Balance }
+      ].map(p => {
+        const initial = (p.name[0] || 'P').toUpperCase();
+        const color = p.bal > 1 ? 'var(--green)' : (p.bal < -1 ? 'var(--red)' : 'var(--text-secondary)');
+        const sign = p.bal > 1 ? '+' : (p.bal < -1 ? '-' : '');
+        return `
+          <div class="tc-card">
+            <div class="tc-left">
+              <div class="tc-avatar">${initial}</div>
+              <div class="tc-info">
+                <div class="tc-title">${p.name}</div>
+                <div class="tc-sub">Pagó ${fmtMoney(p.paid)} en ${fmtMonthName(selectedMonth)}</div>
+              </div>
+            </div>
+            <div class="tc-right">
+              <div class="tc-amount" style="color:${color};">${sign}${fmtMoney(Math.abs(p.bal))}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 3. RENDER RUBROS GROUPED BY SEGMENT FOR THIS MONTH
+      const segGroups = {};
+      const overList = [];
+      const underList = [];
+      const missingList = [];
+
+      activeRubros.forEach(r => {
+        const rExps = monthExpenses.filter(e => e.rubroId === r.id);
+        const spent = rExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+        const diff = r.budget - spent;
+        const pct = r.budget > 0 ? Math.min(100, Math.round((spent / r.budget) * 100)) : 100;
+        const split = computePartnerSplit(rExps);
+
+        const enriched = { ...r, spent, diff, pct, whoMore: split.whoMore, p1Spent: split.p1, p2Spent: split.p2 };
+        if (!segGroups[r.segment]) segGroups[r.segment] = [];
+        segGroups[r.segment].push(enriched);
+
+        if (spent === 0) missingList.push(enriched);
+        else if (spent > r.budget) overList.push(enriched);
+        else underList.push(enriched);
+      });
+
+      document.getElementById('rubrosGroupedList').innerHTML = Object.entries(segGroups).map(([seg, items]) => {
+        const segBudget = items.reduce((s, i) => s + Number(i.budget || 0), 0);
+        const segSpent = items.reduce((s, i) => s + Number(i.spent || 0), 0);
+        return `
+          <div class="group-header">
+            <span>${seg}</span>
+            <span class="sub">${fmtMoney(segSpent)} / ${fmtMoney(segBudget)}</span>
+          </div>
+          <div class="card-list">
+            ${items.map(r => {
+              const barColor = r.spent > r.budget
+                ? 'var(--red)'
+                : (r.spent >= r.budget * 0.85 ? 'var(--orange)' : 'var(--blue)');
+              const statusTxt = r.spent === 0
+                ? `Presupuesto: ${fmtMoney(r.budget)} (Sin gastos)`
+                : (r.diff >= 0 ? `Disponible: ${fmtMoney(r.diff)} de ${fmtMoney(r.budget)}` : `Excedido en ${fmtMoney(Math.abs(r.diff))}`);
+              return `
+                <div class="tc-card clickable" onclick="openEditRubroModal('${r.id}')" title="Toca para editar la cantidad de este rubro en ${fmtMonthName(selectedMonth)}">
+                  <div class="tc-left">
+                    <div class="tc-icon">${getCategoryIcon(r.name + ' ' + r.segment)}</div>
+                    <div class="tc-info">
+                      <div class="tc-title">${r.name}</div>
+                      <div class="tc-sub">${statusTxt}</div>
+                      <div class="mini-progress">
+                        <div class="mini-progress-fill" style="width:${r.pct}%;background:${barColor};"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tc-right">
+                    <div>
+                      <div class="tc-amount">${fmtMoney(r.budget)}</div>
+                      <div class="tc-sub" style="text-align:right;color:var(--blue);">Gastado: ${fmtMoney(r.spent)}</div>
+                    </div>
+                    <button class="edit-btn" onclick="event.stopPropagation(); openEditRubroModal('${r.id}')" title="Editar cantidad">✏️</button>
+                    <button class="del-btn" onclick="deleteRubro('${r.id}', event)" title="Eliminar rubro">✕</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }).join('');
+
+      // 4. RENDER ANÁLISIS DEL MES
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const dailyTotals = Array(daysInMonth + 1).fill(0);
+      monthExpenses.forEach(e => {
+        const day = parseInt(e.date.split('-')[2], 10);
+        if (day >= 1 && day <= daysInMonth) dailyTotals[day] += e.amount;
+      });
+      const maxDaily = Math.max(...dailyTotals, 1);
+      const dailyTarget = totalBudget / daysInMonth;
+      const activeDays = new Set(monthExpenses.map(e => e.date)).size || 1;
+      document.getElementById('dailyAvgLabel').textContent = `Promedio: ${fmtMoney(totalSpent / activeDays)}/día`;
+
+      let chartHTML = '';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const val = dailyTotals[d];
+        const heightPct = Math.max(4, Math.round((val / maxDaily) * 100));
+        const isOver = val > dailyTarget && dailyTarget > 0;
+        chartHTML += `
+          <div class="day-col" title="Día ${d}: ${fmtMoney(val)}">
+            <div class="day-bar ${isOver ? 'over-avg' : ''}" style="height:${val > 0 ? heightPct : 3}%;opacity:${val > 0 ? 1 : 0.22};"></div>
+            <span class="day-label">${d}</span>
+          </div>
+        `;
+      }
+      document.getElementById('dailyChart').innerHTML = chartHTML;
+
+      // Render Saldos Excedidos del Mes Anterior (SOLO donde se gastó de más en el mes previo) y comparativo en el mes actual
+      const prevOver = getPrevMonthOverages(selectedMonth);
+      const carryEl = document.getElementById('analysisCarryover');
+      if (prevOver.items.length === 0) {
+        carryEl.innerHTML = `<div class="tc-card"><div class="tc-sub">En ${fmtMonthName(prevOver.prevYm)} no hubo rubros con gasto excedido para arrastrar a ${fmtMonthName(selectedMonth)}.</div></div>`;
+      } else {
+        carryEl.innerHTML = prevOver.items.map(po => {
+          const currRubro = activeRubros.find(r => r.id === po.id || r.name.toLowerCase() === po.name.toLowerCase());
+          const currBudget = currRubro ? Number(currRubro.budget || 0) : po.prevBudget;
+          const currSpent = currRubro
+            ? monthExpenses.filter(e => e.rubroId === currRubro.id).reduce((s, e) => s + Number(e.amount || 0), 0)
+            : 0;
+          const adjustedAvailable = currBudget - po.excess - currSpent;
+          const compText = adjustedAvailable >= 0
+            ? `✅ Compensado en ${fmtMonthName(selectedMonth)} (Margen neto: ${fmtMoney(adjustedAvailable)})`
+            : `⚠️ Aún sin cubrir el exceso anterior (Faltan ${fmtMoney(Math.abs(adjustedAvailable))})`;
+          return `
+            <div class="tc-card">
+              <div class="tc-left">
+                <div class="tc-icon">${getCategoryIcon(po.name + ' ' + po.segment)}</div>
+                <div class="tc-info">
+                  <div class="tc-title">${po.name} (Exceso de ${fmtMonthName(prevOver.prevYm)})</div>
+                  <div class="tc-sub">Gastó de más en ${fmtMonthName(prevOver.prevYm)}: <strong>${po.whoMore}</strong></div>
+                  <div class="tc-sub" style="color:${adjustedAvailable >= 0 ? 'var(--green)' : 'var(--orange)'};">${compText}</div>
+                </div>
+              </div>
+              <div class="tc-right">
+                <div>
+                  <div class="tc-amount" style="color:var(--orange);">-${fmtMoney(po.excess)}</div>
+                  <div class="tc-sub" style="text-align:right;">Hoy: ${fmtMoney(currSpent)} / ${fmtMoney(currBudget)}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const renderAnalysisCards = (arr, color, labelFn, emptyMsg, showWhoMore) => arr.length
+        ? arr.map(r => `
+            <div class="tc-card clickable" onclick="openEditRubroModal('${r.id}')">
+              <div class="tc-left">
+                <div class="tc-icon">${getCategoryIcon(r.name + ' ' + r.segment)}</div>
+                <div class="tc-info">
+                  <div class="tc-title">${r.name}</div>
+                  <div class="tc-sub">${r.segment} • Presupuesto: ${fmtMoney(r.budget)} | Gastado: ${fmtMoney(r.spent)}</div>
+                  ${showWhoMore ? `<div class="tc-sub" style="color:var(--orange);">👤 Quién gastó más: <strong>${r.whoMore}</strong></div>` : ''}
+                </div>
+              </div>
+              <div class="tc-right">
+                <div class="tc-amount" style="color:${color};">${labelFn(r)}</div>
+              </div>
+            </div>
+          `).join('')
+        : `<div class="tc-card"><div class="tc-sub">${emptyMsg}</div></div>`;
+
+      document.getElementById('analysisOver').innerHTML = renderAnalysisCards(
+        overList,
+        'var(--red)',
+        r => `+${fmtMoney(r.spent - r.budget)}`,
+        'Ningún rubro se ha pasado del presupuesto.',
+        true
+      );
+
+      document.getElementById('analysisUnder').innerHTML = renderAnalysisCards(
+        underList,
+        'var(--green)',
+        r => `Ahorro ${fmtMoney(r.diff)}`,
+        'Aún no hay rubros activos con margen a favor.',
+        false
+      );
+
+      document.getElementById('analysisMissing').innerHTML = renderAnalysisCards(
+        missingList,
+        'var(--purple)',
+        r => fmtMoney(r.budget),
+        '¡Todos los rubros tienen movimientos este mes!',
+        false
+      );
+    }
+
+    // ============================================================================
+    // MOTOR BIDIRECCIONAL EXCEL DASHBOARD <-> APLICACIÓN (Tiempo Real + Manual)
+    // ============================================================================
+    let liveExcelFileHandle = null;
+    let lastKnownExcelModified = 0;
+    let isWritingExcel = false;
+
+    function parseMoneyCell(rawText) {
+      if (rawText === null || rawText === undefined) return 0;
+      let s = String(rawText).trim();
+      if (!s || s === '—') return 0;
+      s = s.replace(/[.,]00$/, '');
+      const cleaned = s.replace(/[^\d-]/g, '');
+      return Number(cleaned || 0);
+    }
+
+    function buildExcelDashboardHtml() {
+      const p1Name = state.partners[0] || 'Persona 1';
+      const p2Name = state.partners[1] || 'Persona 2';
+
+      const monthSet = new Set(Object.keys(state.monthlyConfigs || {}));
+      state.expenses.forEach(e => {
+        if (e.date && e.date.length >= 7) monthSet.add(e.date.slice(0, 7));
+      });
+      monthSet.add(monthPicker.value);
+      const allMonths = Array.from(monthSet).sort();
+
+      const monthReports = [];
+      let prevMonthExcessTotal = 0;
+      let prevMonthOverItems = [];
+
+      allMonths.forEach(ym => {
+        const mConfig = getMonthConfig(ym);
+        const rubros = mConfig.rubros || [];
+        const mExps = state.expenses.filter(e => e.date && e.date.startsWith(ym));
+
+        const sumRubros = rubros.reduce((s, r) => s + Number(r.budget || 0), 0);
+        const totalBudget = (mConfig.customMonthlyBudget !== null && mConfig.customMonthlyBudget !== undefined)
+          ? Number(mConfig.customMonthlyBudget)
+          : sumRubros;
+        const totalSpent = mExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+        const split = computePartnerSplit(mExps);
+
+        const rubrosDetail = [];
+        let thisMonthOverRubrosSum = 0;
+        const currentOverItems = [];
+
+        rubros.forEach(r => {
+          const rExps = mExps.filter(e => e.rubroId === r.id);
+          const spent = rExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+          const budget = Number(r.budget || 0);
+          const excess = spent > budget ? (spent - budget) : 0;
+          const savings = budget > spent ? (budget - spent) : 0;
+          const rSplit = computePartnerSplit(rExps);
+
+          const prevOverMatch = prevMonthOverItems.find(po => po.id === r.id || po.name.toLowerCase() === r.name.toLowerCase());
+          const carriedExcessFromPrev = prevOverMatch ? prevOverMatch.excess : 0;
+          const prevWhoMore = prevOverMatch ? prevOverMatch.whoMore : '—';
+          const netAfterCarryover = budget - carriedExcessFromPrev - spent;
+
+          if (excess > 0) {
+            thisMonthOverRubrosSum += excess;
+            currentOverItems.push({
+              ym,
+              id: r.id,
+              segment: r.segment,
+              name: r.name,
+              budget,
+              spent,
+              excess,
+              p1: rSplit.p1,
+              p2: rSplit.p2,
+              whoMore: rSplit.whoMore
+            });
+          }
+
+          rubrosDetail.push({
+            ym,
+            id: r.id,
+            segment: r.segment,
+            name: r.name,
+            budget,
+            spent,
+            excess,
+            savings,
+            p1: rSplit.p1,
+            p2: rSplit.p2,
+            whoMore: spent > 0 ? rSplit.whoMore : 'Sin gasto',
+            metGoal: spent <= budget,
+            carriedExcessFromPrev,
+            prevWhoMore,
+            netAfterCarryover
+          });
+        });
+
+        const totalMonthExcess = totalSpent > totalBudget ? (totalSpent - totalBudget) : thisMonthOverRubrosSum;
+        const metOverallGoal = totalSpent <= totalBudget && thisMonthOverRubrosSum === 0;
+
+        monthReports.push({
+          ym,
+          monthName: fmtMonthName(ym),
+          totalBudget,
+          totalSpent,
+          metOverallGoal,
+          totalMonthExcess,
+          thisMonthOverRubrosSum,
+          p1: split.p1,
+          p2: split.p2,
+          whoMore: totalSpent > 0 ? split.whoMore : 'Sin gastos',
+          carriedFromPrevTotal: prevMonthExcessTotal,
+          netBudgetAfterCarryover: totalBudget - prevMonthExcessTotal - totalSpent,
+          rubrosDetail,
+          overItems: currentOverItems
+        });
+
+        prevMonthExcessTotal = thisMonthOverRubrosSum;
+        prevMonthOverItems = currentOverItems;
+      });
+
+      const makeVisualBar = (spent, budget) => {
+        if (budget <= 0) return '██████████ (100%)';
+        const filled = Math.min(10, Math.round((spent / budget) * 10));
+        const empty = Math.max(0, 10 - filled);
+        const bar = '█'.repeat(filled) + '░'.repeat(empty);
+        const pct = Math.round((spent / budget) * 100);
+        return `${bar} ${pct}%`;
+      };
+
+      return `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; background-color: #0f172a; color: #f8fafc; }
+          table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
+          .title-banner { background-color: #0284c7; color: #ffffff; font-size: 18pt; font-weight: bold; padding: 14px; text-align: center; }
+          .subtitle-banner { background-color: #1e293b; color: #94a3b8; font-size: 10pt; padding: 8px; text-align: center; }
+          .section-hdr { background-color: #1e293b; color: #38bdf8; font-size: 13pt; font-weight: bold; padding: 10px; border-bottom: 2px solid #0284c7; }
+          th { background-color: #334155; color: #ffffff; font-weight: bold; padding: 8px 10px; border: 1px solid #475569; text-align: center; font-size: 10pt; }
+          td { padding: 7px 10px; border: 1px solid #cbd5e1; font-size: 10pt; background-color: #ffffff; color: #0f172a; }
+          .num { text-align: right; font-weight: bold; }
+          .edit-cell { background-color: #eff6ff; color: #1e3a8a; font-weight: bold; border: 2px solid #3b82f6; }
+          .ok { background-color: #dcfce7; color: #166534; font-weight: bold; text-align: center; }
+          .over { background-color: #fee2e2; color: #991b1b; font-weight: bold; text-align: center; }
+          .warn { background-color: #fef3c7; color: #92400e; font-weight: bold; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <tr><td colspan="11" class="title-banner">📊 DASHBOARD FINANZAS DEL HOGAR — ${p1Name.toUpperCase()} & ${p2Name.toUpperCase()}</td></tr>
+          <tr><td colspan="11" class="subtitle-banner">💡 Las celdas azul claro son EDITABLES en Excel: cambia cualquier Presupuesto, Rubro, Gastado o Movimiento en Excel y guarda (Ctrl+G) para actualizar la App automáticamente.</td></tr>
+        </table>
+
+        <!-- TABLA 1: COMPARATIVO MES A MES Y CUMPLIMIENTO DE META -->
+        <table>
+          <tr><td colspan="11" class="section-hdr">1. COMPARATIVO MES A MES (CUMPLIMIENTO DE META, QUIÉN GASTÓ DE MÁS Y ARRASTRE AL SIGUIENTE MES)</td></tr>
+          <tr>
+            <th>Código Mes</th>
+            <th>Mes</th>
+            <th>Presupuesto Meta (Editable)</th>
+            <th>Total Gastado</th>
+            <th>¿Cumplió Meta?</th>
+            <th>Gastado de Más (Exceso Rubros)</th>
+            <th>Gastó ${p1Name}</th>
+            <th>Gastó ${p2Name}</th>
+            <th>¿Quién Gastó de Más?</th>
+            <th>Exceso Arrastrado del Mes Anterior</th>
+            <th>Saldo Neto Comparado (Meta - Exceso Ant. - Gasto)</th>
+          </tr>
+          ${monthReports.map(mr => `
+            <tr>
+              <td>META_MES|${mr.ym}</td>
+              <td><strong>${mr.monthName}</strong></td>
+              <td class="num edit-cell">${fmtMoney(mr.totalBudget)}</td>
+              <td class="num">${fmtMoney(mr.totalSpent)}</td>
+              <td class="${mr.metOverallGoal ? 'ok' : 'over'}">${mr.metOverallGoal ? '✅ CUMPLIÓ META' : '⚠️ GASTÓ DE MÁS'}</td>
+              <td class="num" style="color:${mr.thisMonthOverRubrosSum > 0 ? '#991b1b' : '#166534'};">${mr.thisMonthOverRubrosSum > 0 ? '+' + fmtMoney(mr.thisMonthOverRubrosSum) : '$0'}</td>
+              <td class="num">${fmtMoney(mr.p1)}</td>
+              <td class="num">${fmtMoney(mr.p2)}</td>
+              <td><strong>${mr.whoMore}</strong></td>
+              <td class="num" style="color:${mr.carriedFromPrevTotal > 0 ? '#92400e' : '#64748b'};">${mr.carriedFromPrevTotal > 0 ? '-' + fmtMoney(mr.carriedFromPrevTotal) : '$0 (Sin exceso previo)'}</td>
+              <td class="${mr.netBudgetAfterCarryover >= 0 ? 'ok' : 'over'}">${fmtMoney(mr.netBudgetAfterCarryover)}</td>
+            </tr>
+          `).join('')}
+        </table>
+
+        <!-- TABLA 2: SALDOS QUE QUEDAN DONDE SE GASTÓ DE MÁS Y SU COMPARATIVO EN EL SIGUIENTE MES -->
+        <table>
+          <tr><td colspan="10" class="section-hdr">2. SEGUIMIENTO EXCLUSIVO DE RUBROS DONDE SE GASTÓ DE MÁS (SALDO QUE PASA Y SE COMPARA EN EL SIGUIENTE MES)</td></tr>
+          <tr>
+            <th>Mes del Exceso</th>
+            <th>Segmento</th>
+            <th>Rubro Excedido</th>
+            <th>Presupuesto</th>
+            <th>Gastado</th>
+            <th>Saldo Excedido (Gastó de Más)</th>
+            <th>¿Quién Gastó de Más en ese Rubro?</th>
+            <th>Mes Siguiente Comparado</th>
+            <th>Gasto en el Mes Siguiente</th>
+            <th>Resultado en el Siguiente Mes (¿Compensó el Exceso?)</th>
+          </tr>
+          ${(() => {
+            const rows = [];
+            for (let i = 0; i < monthReports.length; i++) {
+              const mr = monthReports[i];
+              const nextMr = i + 1 < monthReports.length ? monthReports[i + 1] : null;
+              mr.overItems.forEach(oi => {
+                const nextMatch = nextMr
+                  ? nextMr.rubrosDetail.find(rd => rd.name.toLowerCase() === oi.name.toLowerCase())
+                  : null;
+                const nextMonthLabel = nextMr ? nextMr.monthName : 'Próximo mes (Pendiente)';
+                const nextSpentLabel = nextMatch ? fmtMoney(nextMatch.spent) + ' de ' + fmtMoney(nextMatch.budget) : 'Sin registros aún';
+                let compStatus = '⏳ Pendiente de comparar en próximo mes';
+                let compClass = 'warn';
+                if (nextMatch) {
+                  if (nextMatch.netAfterCarryover >= 0) {
+                    compStatus = '✅ COMPENSÓ EL EXCESO (Sobró ' + fmtMoney(nextMatch.netAfterCarryover) + ')';
+                    compClass = 'ok';
+                  } else {
+                    compStatus = '⚠️ NO COMPENSÓ (Déficit acumulado: ' + fmtMoney(Math.abs(nextMatch.netAfterCarryover)) + ')';
+                    compClass = 'over';
+                  }
+                }
+                rows.push(`
+                  <tr>
+                    <td><strong>${mr.monthName}</strong></td>
+                    <td>${oi.segment}</td>
+                    <td><strong>${oi.name}</strong></td>
+                    <td class="num">${fmtMoney(oi.budget)}</td>
+                    <td class="num">${fmtMoney(oi.spent)}</td>
+                    <td class="over">+${fmtMoney(oi.excess)}</td>
+                    <td><strong>${oi.whoMore}</strong></td>
+                    <td>${nextMonthLabel}</td>
+                    <td class="num">${nextSpentLabel}</td>
+                    <td class="${compClass}">${compStatus}</td>
+                  </tr>
+                `);
+              });
+            }
+            return rows.length > 0
+              ? rows.join('')
+              : `<tr><td colspan="10" class="ok">🎉 ¡Excelente! Hasta ahora ningún rubro se ha excedido de su presupuesto mensual.</td></tr>`;
+          })()}
+        </table>
+
+        <!-- TABLA 3: DETALLE DE RUBROS POR MES (EDITABLE EN EXCEL) -->
+        <table>
+          <tr><td colspan="11" class="section-hdr">3. DASHBOARD DETALLADO POR RUBROS Y SEGMENTOS (MODIFICA PRESUPUESTO, RUBRO O GASTADO AQUÍ EN EXCEL)</td></tr>
+          <tr>
+            <th>Código Rubro</th>
+            <th>Mes</th>
+            <th>Segmento (Editable)</th>
+            <th>Rubro (Editable)</th>
+            <th>Presupuesto (Editable)</th>
+            <th>Gastado (Editable)</th>
+            <th>Barra de Consumo</th>
+            <th>Estado Meta</th>
+            <th>Exceso (Gastó de Más)</th>
+            <th>Exceso Arrastrado del Mes Anterior</th>
+            <th>¿Quién Gastó Más en el Rubro?</th>
+          </tr>
+          ${monthReports.map(mr => mr.rubrosDetail.map(rd => `
+            <tr>
+              <td>RUBRO|${mr.ym}|${rd.id}</td>
+              <td><strong>${mr.monthName}</strong></td>
+              <td class="edit-cell">${rd.segment}</td>
+              <td class="edit-cell"><strong>${rd.name}</strong></td>
+              <td class="num edit-cell">${fmtMoney(rd.budget)}</td>
+              <td class="num edit-cell">${fmtMoney(rd.spent)}</td>
+              <td style="font-family:Consolas,monospace;">${makeVisualBar(rd.spent, rd.budget)}</td>
+              <td class="${rd.metGoal ? 'ok' : 'over'}">${rd.metGoal ? '✅ Cumplió' : '⚠️ Se Pasó'}</td>
+              <td class="num" style="color:${rd.excess > 0 ? '#991b1b' : '#64748b'};">${rd.excess > 0 ? '+' + fmtMoney(rd.excess) : '$0'}</td>
+              <td class="num" style="color:${rd.carriedExcessFromPrev > 0 ? '#92400e' : '#64748b'};">${rd.carriedExcessFromPrev > 0 ? '-' + fmtMoney(rd.carriedExcessFromPrev) : '$0'}</td>
+              <td>${rd.whoMore}</td>
+            </tr>
+          `).join('')).join('')}
+        </table>
+
+        <!-- TABLA 4: TODOS LOS MOVIMIENTOS REGISTRADOS (EDITABLE EN EXCEL) -->
+        <table>
+          <tr><td colspan="11" class="section-hdr">4. HISTORIAL COMPLETO DE MOVIMIENTOS DÍA A DÍA (MODIFICA O AGREGA FILAS AQUÍ EN EXCEL)</td></tr>
+          <tr>
+            <th>Código Movimiento</th>
+            <th>Fecha (YYYY-MM-DD)</th>
+            <th>Mes</th>
+            <th>Segmento</th>
+            <th>Rubro (Editable)</th>
+            <th>Detalle / Descripción (Editable)</th>
+            <th>Pagado Por (Editable)</th>
+            <th>Monto Total (Editable)</th>
+            <th>Corresponde a ${p1Name}</th>
+            <th>Corresponde a ${p2Name}</th>
+            <th>Estado del Rubro ese Mes</th>
+          </tr>
+          ${(() => {
+            const sortedExps = [...state.expenses].sort((a, b) => b.date.localeCompare(a.date));
+            if (sortedExps.length === 0) {
+              return `
+                <tr>
+                  <td>MOV|NUEVO</td>
+                  <td class="edit-cell">${monthPicker.value}-18</td>
+                  <td>${fmtMonthName(monthPicker.value)}</td>
+                  <td>Alimentación</td>
+                  <td class="edit-cell">Mercado Casa</td>
+                  <td class="edit-cell">Ejemplo: cambia el monto de $0 a un valor en Excel para crear un gasto</td>
+                  <td class="edit-cell">${p1Name}</td>
+                  <td class="num edit-cell">$0</td>
+                  <td class="num">$0</td>
+                  <td class="num">$0</td>
+                  <td class="ok">Fila lista para agregar en Excel</td>
+                </tr>
+              `;
+            }
+            return sortedExps.map(e => {
+              const ym = e.date ? e.date.slice(0, 7) : monthPicker.value;
+              const mConfig = getMonthConfig(ym);
+              const r = (mConfig.rubros || []).find(item => item.id === e.rubroId) || { segment: 'General', name: 'Rubro' };
+              const amt = Number(e.amount || 0);
+              const p1Share = e.payer === p1Name ? amt : (e.payer === p2Name ? 0 : amt / 2);
+              const p2Share = e.payer === p2Name ? amt : (e.payer === p1Name ? 0 : amt / 2);
+
+              const rMonthSpent = state.expenses
+                .filter(x => x.date && x.date.startsWith(ym) && x.rubroId === e.rubroId)
+                .reduce((s, x) => s + Number(x.amount || 0), 0);
+              const isOver = r.budget !== undefined && rMonthSpent > Number(r.budget);
+
+              return `
+                <tr>
+                  <td>MOV|${e.id}</td>
+                  <td class="edit-cell">${e.date}</td>
+                  <td>${fmtMonthName(ym)}</td>
+                  <td>${r.segment}</td>
+                  <td class="edit-cell"><strong>${r.name}</strong></td>
+                  <td class="edit-cell">${e.desc}</td>
+                  <td class="edit-cell"><strong>${e.payer}</strong></td>
+                  <td class="num edit-cell">${fmtMoney(amt)}</td>
+                  <td class="num">${fmtMoney(p1Share)}</td>
+                  <td class="num">${fmtMoney(p2Share)}</td>
+                  <td class="${isOver ? 'over' : 'ok'}">${isOver ? '⚠️ Rubro Excedido' : '✅ En Presupuesto'}</td>
+                </tr>
+              `;
+            }).join('');
+          })()}
+        </table>
+      </body>
+      </html>
+      `;
+    }
+
+    window.downloadExcelDashboard = function() {
+      const p1Name = state.partners[0] || 'Persona 1';
+      const p2Name = state.partners[1] || 'Persona 2';
+      const html = buildExcelDashboardHtml();
+      const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Dashboard-Finanzas-${p1Name}-${p2Name}.xls`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // Lee un archivo Excel (.xls HTML guardado por Microsoft Excel) y aplica cualquier cambio de presupuestos, rubros o gastos en la aplicación
+    async function parseExcelDashboardAndApply(htmlText, silentMode) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        const rows = Array.from(doc.querySelectorAll('tr'));
+        if (rows.length === 0) return false;
+
+        let changesCount = 0;
+        const seenMovIds = new Set();
+        const excelRubroTargetSpent = [];
+
+        rows.forEach(tr => {
+          const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim());
+          if (cells.length < 4) return;
+          const code = cells[0] || '';
+
+          // 1. Filas de Presupuesto Mensual General: META_MES|YYYY-MM
+          if (code.startsWith('META_MES|')) {
+            const ym = code.split('|')[1];
+            const newMetaBudget = parseMoneyCell(cells[2]);
+            const mConfig = getMonthConfig(ym);
+            const sumRubros = (mConfig.rubros || []).reduce((s, r) => s + Number(r.budget || 0), 0);
+            const currEffective = (mConfig.customMonthlyBudget !== null && mConfig.customMonthlyBudget !== undefined)
+              ? Number(mConfig.customMonthlyBudget)
+              : sumRubros;
+            if (newMetaBudget >= 0 && Math.abs(newMetaBudget - currEffective) >= 1) {
+              mConfig.customMonthlyBudget = newMetaBudget;
+              mConfig.updatedAt = Date.now();
+              changesCount++;
+            }
+          }
+
+          // 2. Filas de Rubros y Segmentos: RUBRO|YYYY-MM|id
+          else if (code.startsWith('RUBRO|')) {
+            const parts = code.split('|');
+            const ym = parts[1];
+            const rId = parts[2];
+            const newSeg = cells[2] || 'General';
+            const newName = cells[3] || 'Rubro';
+            const newBudget = parseMoneyCell(cells[4]);
+            const newSpentInExcel = parseMoneyCell(cells[5]);
+
+            const mConfig = getMonthConfig(ym);
+            let targetRubro = (mConfig.rubros || []).find(r => r.id === rId);
+            if (!targetRubro) {
+              targetRubro = { id: rId || ('r_' + Date.now()), segment: newSeg, name: newName, budget: newBudget };
+              mConfig.rubros.push(targetRubro);
+              mConfig.updatedAt = Date.now();
+              changesCount++;
+            } else {
+              if (targetRubro.segment !== newSeg || targetRubro.name !== newName || Math.abs(Number(targetRubro.budget || 0) - newBudget) >= 1) {
+                targetRubro.segment = newSeg;
+                targetRubro.name = newName;
+                targetRubro.budget = newBudget;
+                // Si el presupuesto mensual estaba en suma automática, mantenerlo sincronizado
+                mConfig.updatedAt = Date.now();
+                changesCount++;
+              }
+            }
+
+            excelRubroTargetSpent.push({ ym, rubroId: targetRubro.id, rubroName: targetRubro.name, excelSpent: newSpentInExcel });
+          }
+
+          // 3. Filas de Movimientos: MOV|id o MOV|NUEVO
+          else if (code.startsWith('MOV|')) {
+            const movId = code.split('|')[1];
+            const dateStr = (cells[1] || '').trim();
+            const rName = (cells[4] || '').trim();
+            const desc = (cells[5] || '').trim();
+            const payer = (cells[6] || state.partners[0] || 'Yo').trim();
+            const amount = parseMoneyCell(cells[7]);
+
+            const ym = (dateStr && dateStr.length >= 7) ? dateStr.slice(0, 7) : monthPicker.value;
+            const mConfig = getMonthConfig(ym);
+            let matchedRubro = (mConfig.rubros || []).find(r => r.name.toLowerCase() === rName.toLowerCase());
+            if (!matchedRubro && mConfig.rubros.length > 0) {
+              matchedRubro = mConfig.rubros[0];
+            }
+            const rubroId = matchedRubro ? matchedRubro.id : 'r2';
+
+            if (movId === 'NUEVO') {
+              if (amount > 0) {
+                const newId = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+                state.expenses.push({
+                  id: newId,
+                  date: dateStr || `${ym}-18`,
+                  rubroId,
+                  amount,
+                  payer,
+                  desc: desc.startsWith('Ejemplo:') ? `Gasto en ${rName}` : (desc || `Gasto en ${rName}`)
+                });
+                seenMovIds.add(newId);
+                changesCount++;
+              }
+            } else {
+              seenMovIds.add(movId);
+              const existingExp = state.expenses.find(e => e.id === movId);
+              if (existingExp) {
+                if (amount <= 0) {
+                  // Si pusieron el monto en $0 en Excel, eliminar ese gasto
+                  state.expenses = state.expenses.filter(e => e.id !== movId);
+                  if (!state.deletedIds) state.deletedIds = [];
+                  state.deletedIds.push(movId);
+                  changesCount++;
+                } else if (
+                  existingExp.date !== dateStr ||
+                  existingExp.rubroId !== rubroId ||
+                  existingExp.desc !== desc ||
+                  existingExp.payer !== payer ||
+                  Math.abs(Number(existingExp.amount || 0) - amount) >= 1
+                ) {
+                  existingExp.date = dateStr;
+                  existingExp.rubroId = rubroId;
+                  existingExp.desc = desc;
+                  existingExp.payer = payer;
+                  existingExp.amount = amount;
+                  changesCount++;
+                }
+              } else if (amount > 0) {
+                state.expenses.push({
+                  id: movId,
+                  date: dateStr || `${ym}-18`,
+                  rubroId,
+                  amount,
+                  payer,
+                  desc: desc || `Gasto desde Excel`
+                });
+                changesCount++;
+              }
+            }
+          }
+        });
+
+        // 4. Verificar si el usuario modificó directamente la columna "Gastado (Editable)" en la Tabla 3 de Rubros
+        excelRubroTargetSpent.forEach(item => {
+          const currentRubroExps = state.expenses.filter(e => e.date && e.date.startsWith(item.ym) && e.rubroId === item.rubroId);
+          const currentSum = currentRubroExps.reduce((s, e) => s + Number(e.amount || 0), 0);
+          const diff = item.excelSpent - currentSum;
+          if (Math.abs(diff) >= 1) {
+            if (diff > 0) {
+              state.expenses.push({
+                id: 'e_xls_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                date: `${item.ym}-18`,
+                rubroId: item.rubroId,
+                amount: diff,
+                payer: 'Ambos (50/50)',
+                desc: `Ajuste directo en Excel (${item.rubroName})`
+              });
+              changesCount++;
+            } else if (item.excelSpent === 0 && currentRubroExps.length > 0) {
+              if (!state.deletedIds) state.deletedIds = [];
+              currentRubroExps.forEach(e => state.deletedIds.push(e.id));
+              state.expenses = state.expenses.filter(e => !(e.date && e.date.startsWith(item.ym) && e.rubroId === item.rubroId));
+              changesCount++;
+            } else if (diff < 0 && currentRubroExps.length > 0) {
+              // Ajustar proporcionalmente o restar del último movimiento de ese rubro
+              const lastExp = currentRubroExps[currentRubroExps.length - 1];
+              lastExp.amount = Math.max(0, Number(lastExp.amount || 0) + diff);
+              changesCount++;
+            }
+          }
+        });
+
+        if (changesCount > 0) {
+          await saveState(true); // Guardar en App, PC y Nube
+          await writeLiveExcelFileSilent(); // Refrescar fórmulas/barras en el Excel
+          const badge = document.getElementById('excelSyncBadge');
+          if (badge) {
+            badge.textContent = '🟢 Sincronizado desde Excel (' + new Date().toLocaleTimeString() + ')';
+            badge.style.color = 'var(--green)';
+          }
+          if (!silentMode) {
+            alert(`✅ ¡Se aplicaron ${changesCount} cambio(s) desde el archivo Excel a la aplicación y a la nube!`);
+          }
+          return true;
+        } else {
+          if (!silentMode) {
+            alert('ℹ️ El archivo Excel fue leído correctamente (no se encontraron diferencias nuevas respecto a la app).');
+          }
+          return false;
+        }
+      } catch (err) {
+        if (!silentMode) {
+          alert('⚠️ No se pudo leer el archivo Excel: ' + err.message);
+        }
+        return false;
+      }
+    }
+
+    window.handleExcelFileUpload = function(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        await parseExcelDashboardAndApply(e.target.result, false);
+        evt.target.value = '';
+      };
+      reader.readAsText(file);
+    };
+
+    async function writeLiveExcelFileSilent() {
+      if (!liveExcelFileHandle || isWritingExcel) return;
+      try {
+        isWritingExcel = true;
+        const html = '\ufeff' + buildExcelDashboardHtml();
+        const writable = await liveExcelFileHandle.createWritable();
+        await writable.write(html);
+        await writable.close();
+        const file = await liveExcelFileHandle.getFile();
+        lastKnownExcelModified = file.lastModified;
+        const badge = document.getElementById('excelSyncBadge');
+        if (badge) {
+          badge.textContent = '🟢 Excel Actualizado (' + new Date().toLocaleTimeString() + ')';
+          badge.style.color = 'var(--green)';
+        }
+      } catch (e) {
+        // Si Excel tiene bloqueado el archivo temporalmente mientras el usuario edita, no interrumpir
+      } finally {
+        isWritingExcel = false;
+      }
+    }
+
+    window.linkLiveExcelFile = async function() {
+      if (!window.showSaveFilePicker) {
+        // Fallback si el navegador móvil no soporta FileSystemAccess API directa
+        downloadExcelDashboard();
+        return;
+      }
+      try {
+        const p1Name = state.partners[0] || 'Persona1';
+        const p2Name = state.partners[1] || 'Persona2';
+        liveExcelFileHandle = await window.showSaveFilePicker({
+          suggestedName: `Dashboard-Finanzas-${p1Name}-${p2Name}.xls`,
+          types: [{
+            description: 'Archivo Excel Dashboard (.xls)',
+            accept: { 'application/vnd.ms-excel': ['.xls'] }
+          }]
+        });
+        await writeLiveExcelFileSilent();
+        const badge = document.getElementById('excelSyncBadge');
+        if (badge) {
+          badge.textContent = '🟢 Vinculado en Vivo (Auto-Sync Activo)';
+          badge.style.color = 'var(--green)';
+        }
+        alert('✅ ¡Archivo Excel vinculado en vivo!\n\n1. Cada vez que agregues o cambies un gasto o presupuesto aquí en la App, ese archivo Excel se actualizará automáticamente.\n2. Si abres ese archivo en Excel, modificas cualquier celda azul (Presupuesto, Rubro, Gastado o Movimiento) y guardas (Ctrl+G), la App detectará el cambio automáticamente en 2 segundos.');
+      } catch (e) {}
+    };
+
+    // Vigilante automático cada 2 segundos:
+    // 1) Detecta cambios hechos en Excel en vivo desde el PC (/api/state actualizado por el sincronizador de Excel)
+    // 2) O desde un archivo vinculado directamente en el navegador
+    setInterval(async () => {
+      if (location.protocol.startsWith('http')) {
+        try {
+          const res = await fetch('/api/state', { cache: 'no-store' });
+          if (res.ok) {
+            const pcData = await res.json();
+            if (pcData && Number(pcData.updatedAt || 0) > Number(state.updatedAt || 0)) {
+              state = pcData;
+              safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+              renderAll();
+              const badge = document.getElementById('excelSyncBadge');
+              if (badge) {
+                badge.textContent = '🟢 Sincronizado en Vivo con Excel (' + new Date().toLocaleTimeString() + ')';
+                badge.style.color = 'var(--green)';
+              }
+              try { await pushToCloud(); } catch (e) {}
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (!liveExcelFileHandle || isWritingExcel) return;
+      try {
+        const file = await liveExcelFileHandle.getFile();
+        if (file.lastModified > lastKnownExcelModified && lastKnownExcelModified > 0) {
+          lastKnownExcelModified = file.lastModified;
+          const text = await file.text();
+          await parseExcelDashboardAndApply(text, true);
+        }
+      } catch (e) {}
+    }, 2000);
+
+    initState();
+  </script>
+</body>
+</html>
