@@ -1445,7 +1445,8 @@
     });
 
     function getCategoryIcon(text) {
-      const t = (text || '').toLowerCase();
+      const t = (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (t.includes('alicia') || t.includes('alisia') || t.includes('bebe') || t.includes('baby') || t.includes('panal') || t.includes('nina') || t.includes('nino') || t.includes('hija') || t.includes('hijo')) return '👶';
       if (t.includes('arriendo') || t.includes('casa') || t.includes('hogar') || t.includes('hipoteca')) return '🏠';
       if (t.includes('mercado') || t.includes('aliment') || t.includes('comida') || t.includes('super')) return '🛒';
       if (t.includes('mecato') || t.includes('dulce') || t.includes('antojo') || t.includes('snack')) return '🍫';
@@ -1453,7 +1454,7 @@
       if (t.includes('salida') || t.includes('restaurante') || t.includes('ocio') || t.includes('cita')) return '🍽️';
       if (t.includes('transporte') || t.includes('gasolina') || t.includes('carro') || t.includes('moto')) return '🚗';
       if (t.includes('ahorro') || t.includes('fondo') || t.includes('meta')) return '💰';
-      if (t.includes('salud') || t.includes('farmacia') || t.includes('médico')) return '💊';
+      if (t.includes('salud') || t.includes('farmacia') || t.includes('medico')) return '💊';
       if (t.includes('mascota') || t.includes('perro') || t.includes('gato')) return '🐾';
       return '💳';
     }
