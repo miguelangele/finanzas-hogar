@@ -1635,6 +1635,49 @@
       };
     }
 
+    // Reensamblador de mensajes cifrados por bloques (evita el límite de 4096 bytes de ntfy.sh para que nunca se corte la sincronización)
+    const liveChunkBuffers = {};
+
+    function processIncomingCloudText(rawText, buffers) {
+      if (!rawText || !activePin) return null;
+      if (rawText.startsWith('ENC2:')) {
+        const dec = decryptWithPin(rawText, activePin);
+        if (!dec) return null;
+        try { return JSON.parse(dec); } catch (e) { return null; }
+      }
+      if (rawText.startsWith('ENC2C:')) {
+        // Formato: ENC2C:<batchId>:<idx>/<total>:<slice>
+        const p1 = rawText.indexOf(':', 6);
+        if (p1 < 0) return null;
+        const batchId = rawText.slice(6, p1);
+        const p2 = rawText.indexOf(':', p1 + 1);
+        if (p2 < 0) return null;
+        const frac = rawText.slice(p1 + 1, p2).split('/');
+        const idx = parseInt(frac[0], 10);
+        const total = parseInt(frac[1], 10);
+        const slice = rawText.slice(p2 + 1);
+        if (isNaN(idx) || isNaN(total) || total <= 0) return null;
+
+        if (!buffers[batchId]) buffers[batchId] = { total, parts: {}, count: 0 };
+        if (buffers[batchId].parts[idx] === undefined) {
+          buffers[batchId].parts[idx] = slice;
+          buffers[batchId].count++;
+        }
+        if (buffers[batchId].count === total) {
+          let fullEnc = '';
+          for (let i = 0; i < total; i++) {
+            if (buffers[batchId].parts[i] === undefined) return null;
+            fullEnc += buffers[batchId].parts[i];
+          }
+          delete buffers[batchId];
+          const dec = decryptWithPin(fullEnc, activePin);
+          if (!dec) return null;
+          try { return JSON.parse(dec); } catch (e) { return null; }
+        }
+      }
+      return null;
+    }
+
     async function pullFromCloud() {
       const channel = getCloudChannel();
       if (!channel || !activePin) return null;
@@ -1643,16 +1686,23 @@
       const text = await res.text();
       const lines = text.trim().split('\n').filter(Boolean);
       let latestRemote = null;
+      const pollBuffers = {};
+
       for (const line of lines) {
         try {
           const msg = JSON.parse(line);
-          if (msg.event === 'message' && msg.message) {
-            const decrypted = decryptWithPin(msg.message, activePin);
-            if (decrypted) {
-              const payload = JSON.parse(decrypted);
-              if (payload && payload.partners && payload.monthlyConfigs) {
-                latestRemote = mergeStates(latestRemote, payload);
-              }
+          if (msg.event === 'message') {
+            let msgBody = msg.message || '';
+            // Respaldo si algún mensaje anterior superó 4KB y quedó como adjunto
+            if (!msgBody.startsWith('ENC2') && msg.attachment && msg.attachment.url) {
+              try {
+                const attRes = await fetch(msg.attachment.url, { cache: 'no-store' });
+                if (attRes.ok) msgBody = await attRes.text();
+              } catch (e) {}
+            }
+            const payload = processIncomingCloudText(msgBody, pollBuffers);
+            if (payload && payload.partners && payload.monthlyConfigs) {
+              latestRemote = mergeStates(latestRemote, payload);
             }
           }
         } catch (e) {}
@@ -1663,14 +1713,40 @@
     async function pushToCloud() {
       const channel = getCloudChannel();
       if (!channel || !activePin) return;
-      const plainPayload = JSON.stringify({ ...state, _sender: DEVICE_ID });
+      // Compactar payload eliminando duplicaciones innecesarias antes de cifrar
+      const compactState = {
+        partners: state.partners,
+        updatedAt: state.updatedAt || Date.now(),
+        deletedIds: state.deletedIds || [],
+        customMonthlyBudget: state.customMonthlyBudget,
+        monthlyConfigs: state.monthlyConfigs,
+        expenses: state.expenses,
+        _sender: DEVICE_ID
+      };
+      const plainPayload = JSON.stringify(compactState);
       const encryptedBody = encryptWithPin(plainPayload, activePin);
-      const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}`, {
-        method: 'POST',
-        body: encryptedBody
-      });
-      if (res.ok) {
-        cloudConnected = true;
+      const CHUNK_SIZE = 2800; // Seguro por debajo del límite de 4096 bytes de ntfy.sh
+
+      if (encryptedBody.length <= CHUNK_SIZE) {
+        const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}`, {
+          method: 'POST',
+          body: encryptedBody
+        });
+        if (res.ok) cloudConnected = true;
+      } else {
+        const batchId = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        const total = Math.ceil(encryptedBody.length / CHUNK_SIZE);
+        let allOk = true;
+        for (let i = 0; i < total; i++) {
+          const slice = encryptedBody.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+          const chunkMsg = `ENC2C:${batchId}:${i}/${total}:${slice}`;
+          const res = await fetch(`https://ntfy.sh/${encodeURIComponent(channel)}`, {
+            method: 'POST',
+            body: chunkMsg
+          });
+          if (!res.ok) allOk = false;
+        }
+        if (allOk) cloudConnected = true;
       }
     }
 
@@ -1689,21 +1765,62 @@
             if (!isUnlocked || !activePin) return;
             const data = JSON.parse(evt.data);
             if (data.event === 'message' && data.message) {
-              const decrypted = decryptWithPin(data.message, activePin);
-              if (decrypted) {
-                const incoming = JSON.parse(decrypted);
-                if (incoming && incoming._sender !== DEVICE_ID && incoming.partners) {
-                  state = mergeStates(state, incoming);
-                  safeSetStorage(STORAGE_KEY, JSON.stringify(state));
-                  await syncLocalPcSilent();
-                  renderAll();
-                }
+              const incoming = processIncomingCloudText(data.message, liveChunkBuffers);
+              if (incoming && incoming._sender !== DEVICE_ID && incoming.partners) {
+                state = mergeStates(state, incoming);
+                safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+                await syncLocalPcSilent();
+                renderAll();
               }
             }
           } catch (e) {}
         };
       } catch (e) {}
     }
+
+    // Re-sincronización automática pensada para iOS Safari / iPhone (cuando vuelve del segundo plano o cada 15s)
+    let periodicSyncRunning = false;
+    async function backgroundCloudPullSilent() {
+      if (!isUnlocked || !activePin || periodicSyncRunning) return;
+      periodicSyncRunning = true;
+      try {
+        const beforeStr = JSON.stringify(state.expenses) + JSON.stringify(state.monthlyConfigs) + JSON.stringify(state.partners);
+        const cloudData = await pullFromCloud();
+        if (cloudData) {
+          cloudConnected = true;
+          const merged = mergeStates(state, cloudData);
+          const afterStr = JSON.stringify(merged.expenses) + JSON.stringify(merged.monthlyConfigs) + JSON.stringify(merged.partners);
+          if (afterStr !== beforeStr) {
+            state = merged;
+            safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+            await syncLocalPcSilent();
+            renderAll();
+          } else {
+            updateConnectionLabel();
+          }
+        }
+      } catch (e) {}
+      finally {
+        periodicSyncRunning = false;
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && isUnlocked) {
+        backgroundCloudPullSilent();
+        startLiveCloudListener();
+      }
+    });
+    window.addEventListener('online', () => {
+      if (isUnlocked) {
+        syncCloudNow(false);
+      }
+    });
+    setInterval(() => {
+      if (isUnlocked && !document.hidden) {
+        backgroundCloudPullSilent();
+      }
+    }, 15000);
 
     async function syncLocalPcSilent() {
       if (!location.protocol.startsWith('http')) return;
