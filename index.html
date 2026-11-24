@@ -879,6 +879,52 @@
       cursor: pointer;
       padding: 0.25rem;
     }
+
+    /* Selector de Perfil Independiente (Compartido vs Privado) */
+    .profile-switcher {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+      background: var(--card);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 0.85rem;
+      border: 1px solid var(--border);
+    }
+
+    .profile-pill {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.5rem 0.6rem;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      transition: all 0.18s ease;
+      touch-action: manipulation;
+    }
+
+    .profile-pill.active-shared {
+      background: rgba(10, 132, 255, 0.22);
+      color: var(--blue);
+      box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.45);
+    }
+
+    .profile-pill.active-personal {
+      background: rgba(191, 90, 242, 0.24);
+      color: #d896ff;
+      box-shadow: inset 0 0 0 1px rgba(191, 90, 242, 0.55);
+    }
+
+    .hero-icon.personal-mode {
+      background: linear-gradient(135deg, #bf5af2 0%, #5e5ce6 55%, #0a84ff 100%);
+      box-shadow: 0 6px 20px rgba(191, 90, 242, 0.32);
+    }
   </style>
 </head>
 <body>
@@ -935,9 +981,19 @@
       </div>
     </div>
 
+    <!-- Selector de Perfil Independiente (Compartido vs Privado Personal) -->
+    <div class="profile-switcher" role="tablist" aria-label="Cambiar perfil de finanzas">
+      <button type="button" class="profile-pill active-shared" id="profileBtnShared" onclick="switchToSharedProfile()">
+        <span>👥</span><span>Compartido</span>
+      </button>
+      <button type="button" class="profile-pill" id="profileBtnPersonal" onclick="openPersonalProfilePrompt()">
+        <span>👤</span><span>Mi Perfil Privado</span>
+      </button>
+    </div>
+
     <!-- Centered Tricount Hero -->
     <div class="hero-header">
-      <div class="hero-icon">🌆</div>
+      <div class="hero-icon" id="heroIcon">🌆</div>
       <div class="hero-title" id="coupleTitle">Hogar en Pareja</div>
       <div class="hero-subtitle" id="dbStatusText">☁️ Sincronizando automáticamente por Internet...</div>
       <div class="month-badge-banner" id="activeMonthBanner">📅 Presupuesto independiente de Noviembre 2026</div>
@@ -1020,7 +1076,7 @@
         <button class="reimburse-btn-card" style="margin:0;" onclick="openNewRubroModal()">
           + Nuevo Rubro
         </button>
-        <button class="reimburse-btn-card" style="margin:0;color:var(--green);border-color:rgba(48,209,88,0.3);" onclick="syncFixedRubrosFromPrevMonth()">
+        <button class="reimburse-btn-card" id="syncFixedRubrosBtn" style="margin:0;color:var(--green);border-color:rgba(48,209,88,0.3);" onclick="syncFixedRubrosFromPrevMonth()">
           📌 Traer 6 Fijos del Mes Ant.
         </button>
       </div>
@@ -1229,6 +1285,37 @@
     </div>
   </div>
 
+  <!-- MODAL 5: ACCESO A PERFIL PRIVADO PERSONAL (Solo visible con tu PIN personal) -->
+  <div class="modal-backdrop" id="personalPinModal">
+    <div class="modal-sheet">
+      <div class="sheet-header">
+        <h3>🔐 Mi Perfil Privado (Solo Tú)</h3>
+        <button class="sheet-close" onclick="closeModals()">✕</button>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.9rem;line-height:1.45;">
+        Tus gastos e ingresos aquí son <strong>100% independientes</strong> y nunca aparecen en los gastos compartidos ni en el celular de tu pareja. Usa un <strong>PIN personal distinto al de pareja</strong> para abrir tu espacio privado.
+      </p>
+      <form id="personalPinForm">
+        <div class="field-group">
+          <label>Nombre de tu Perfil Privado (opcional)</label>
+          <input type="text" id="personalProfileNameInput" class="field-input" placeholder="Ej. Mis Gastos Personales" />
+        </div>
+        <div class="field-group">
+          <label>Tu PIN o Clave Personal (mínimo 4 caracteres)</label>
+          <div style="position:relative;">
+            <input type="password" id="personalPinInput" class="field-input" placeholder="Ingresa tu PIN personal secreto..." minlength="4" style="padding-right:2.6rem;font-weight:700;letter-spacing:0.06em;" required />
+            <button type="button" class="pin-toggle-btn" onclick="togglePersonalPinVisibility()" title="Mostrar / Ocultar">👁️</button>
+          </div>
+        </div>
+        <div id="personalPinError" style="color:var(--red);font-size:0.78rem;margin-bottom:0.65rem;display:none;"></div>
+        <button type="submit" class="primary-btn" style="background:linear-gradient(135deg,#bf5af2 0%,#5e5ce6 100%);">🔓 Entrar a mi Perfil Privado</button>
+      </form>
+      <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.85rem;text-align:center;">
+        Al volver a <strong>👥 Compartido</strong>, tu perfil privado se bloquea automáticamente.
+      </p>
+    </div>
+  </div>
+
   <script>
     // Ocultar aviso de QuickLook inmediatamente cuando JavaScript está activo
     (function() {
@@ -1389,9 +1476,59 @@
       }
     }
 
+    let activeProfileMode = 'shared'; // 'shared' (Hogar en Pareja) | 'personal' (Perfil Privado Independiente)
+    let couplePin = '';
+    let personalProfileTitle = 'Mis Finanzas Personales';
+
+    const PERSONAL_DEFAULT_RUBROS = [
+      { id: 'p_r1', segment: 'Personal', name: 'Gastos Personales', budget: 200000 },
+      { id: 'p_r2', segment: 'Personal', name: 'Gustos y Antojos', budget: 150000 },
+      { id: 'p_r3', segment: 'Ahorro', name: 'Ahorro Personal', budget: 200000 },
+      { id: 'p_r4', segment: 'Personal', name: 'Transporte / Otros', budget: 100000 }
+    ];
+
     function getCloudChannel() {
       if (!activePin) return '';
+      if (activeProfileMode === 'personal') {
+        return 'fh_p1_' + bytesToHex(sha256Bytes(utf8Encode('fh_personal_chan_v1:' + activePin))).slice(0, 28);
+      }
       return 'fh_v2_' + bytesToHex(sha256Bytes(utf8Encode('fh_chan_v2:' + activePin))).slice(0, 28);
+    }
+
+    function getActiveStorageKey() {
+      if (activeProfileMode === 'personal') {
+        const ch = getCloudChannel();
+        return ch ? ('finanzas_personal_v1_' + ch) : 'finanzas_personal_v1_tmp';
+      }
+      return STORAGE_KEY;
+    }
+
+    function updateProfileSwitcherUI() {
+      const btnShared = document.getElementById('profileBtnShared');
+      const btnPersonal = document.getElementById('profileBtnPersonal');
+      const heroIcon = document.getElementById('heroIcon');
+      const heroTitle = document.getElementById('coupleTitle');
+      const syncFixedBtn = document.getElementById('syncFixedRubrosBtn');
+
+      if (activeProfileMode === 'personal') {
+        if (btnShared) btnShared.className = 'profile-pill';
+        if (btnPersonal) btnPersonal.className = 'profile-pill active-personal';
+        if (heroIcon) {
+          heroIcon.textContent = '🔐';
+          heroIcon.classList.add('personal-mode');
+        }
+        if (heroTitle) heroTitle.textContent = state.profileName || personalProfileTitle || 'Mis Finanzas Personales';
+        if (syncFixedBtn) syncFixedBtn.style.display = 'none';
+      } else {
+        if (btnShared) btnShared.className = 'profile-pill active-shared';
+        if (btnPersonal) btnPersonal.className = 'profile-pill';
+        if (heroIcon) {
+          heroIcon.textContent = '🌆';
+          heroIcon.classList.remove('personal-mode');
+        }
+        if (heroTitle) heroTitle.textContent = 'Hogar en Pareja';
+        if (syncFixedBtn) syncFixedBtn.style.display = 'block';
+      }
     }
 
     window.togglePinVisibility = function() {
@@ -1399,14 +1536,46 @@
       inp.type = inp.type === 'password' ? 'text' : 'password';
     };
 
+    window.togglePersonalPinVisibility = function() {
+      const inp = document.getElementById('personalPinInput');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    };
+
+    window.openPersonalProfilePrompt = function() {
+      if (activeProfileMode === 'personal') return;
+      document.getElementById('personalPinError').style.display = 'none';
+      document.getElementById('personalPinInput').value = '';
+      const savedName = safeGetStorage('finanzas_personal_name_hint') || '';
+      document.getElementById('personalProfileNameInput').value = savedName;
+      document.getElementById('personalPinModal').classList.add('open');
+      setTimeout(() => {
+        try { document.getElementById('personalPinInput').focus(); } catch (e) {}
+      }, 100);
+    };
+
+    window.switchToSharedProfile = async function() {
+      if (activeProfileMode === 'shared') return;
+      if (typeof closeMqttClean === 'function') closeMqttClean();
+      activeProfileMode = 'shared';
+      activePin = couplePin;
+      state = deepClone(defaultData);
+      pcConnected = false;
+      cloudConnected = false;
+      updateProfileSwitcherUI();
+      await initState();
+    };
+
     window.lockApp = function(clearRemembered) {
       isUnlocked = false;
+      activeProfileMode = 'shared';
       activePin = '';
+      couplePin = '';
       if (typeof closeMqttClean === 'function') closeMqttClean();
       if (clearRemembered) {
         try { localStorage.removeItem(SAVED_PIN_KEY); } catch (e) {}
       }
       closeModals();
+      updateProfileSwitcherUI();
       document.getElementById('pinInput').value = '';
       document.getElementById('pinLockScreen').classList.remove('unlocked');
     };
@@ -1600,6 +1769,25 @@
       if (!state.monthlyConfigs[ym]) {
         const existingMonths = Object.keys(state.monthlyConfigs).sort();
         const prevYm = getPrevMonthStr(ym);
+
+        if (activeProfileMode === 'personal') {
+          let sourcePersonal = PERSONAL_DEFAULT_RUBROS;
+          if (state.monthlyConfigs[prevYm]) {
+            sourcePersonal = state.monthlyConfigs[prevYm].rubros;
+          } else if (existingMonths.length > 0) {
+            const prevMonths = existingMonths.filter(m => m < ym);
+            const refMonth = prevMonths.length > 0 ? prevMonths[prevMonths.length - 1] : existingMonths[existingMonths.length - 1];
+            sourcePersonal = state.monthlyConfigs[refMonth].rubros;
+          }
+          state.monthlyConfigs[ym] = {
+            updatedAt: Date.now(),
+            autoInherited: true,
+            rubros: deepClone(sourcePersonal),
+            customMonthlyBudget: null
+          };
+          return state.monthlyConfigs[ym];
+        }
+
         let sourceRubros = defaultRubrosTemplate;
 
         if (state.monthlyConfigs[prevYm]) {
@@ -1626,6 +1814,7 @@
 
     // Propaga cambios de los 6 rubros fijos hacia meses futuros que aún sean heredados automáticamente y sin gastos
     function propagateFixedRubrosForward(fromYm) {
+      if (activeProfileMode !== 'shared') return;
       const futureMonths = Object.keys(state.monthlyConfigs || {})
         .filter(m => m > fromYm)
         .sort();
@@ -1747,9 +1936,10 @@
 
       return {
         partners: newer.partners || ['Persona 1', 'Persona 2'],
+        profileName: newer.profileName || localSt.profileName || remoteSt.profileName || undefined,
         updatedAt: Math.max(localTime, remoteTime, Date.now()),
         deletedIds: Array.from(deletedSet),
-        rubros: (newer.rubros || defaultRubrosTemplate).filter(r => !deletedSet.has(r.id)),
+        rubros: (newer.rubros || (activeProfileMode === 'personal' ? PERSONAL_DEFAULT_RUBROS : defaultRubrosTemplate)).filter(r => !deletedSet.has(r.id)),
         customMonthlyBudget: newer.customMonthlyBudget !== undefined ? newer.customMonthlyBudget : null,
         monthlyConfigs: mergedConfigs,
         expenses: Array.from(expMap.values()).sort((a, b) => b.date.localeCompare(a.date))
@@ -1824,7 +2014,8 @@
 
     function getMqttTopic() {
       const ch = getCloudChannel();
-      return ch ? ('fh/v2/' + ch) : '';
+      if (!ch) return '';
+      return activeProfileMode === 'personal' ? ('fh/personal_v1/' + ch) : ('fh/v2/' + ch);
     }
 
     function closeMqttClean() {
@@ -1852,7 +2043,7 @@
         lastCloudSyncTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (afterSig !== beforeSig) {
           state = merged;
-          safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+          safeSetStorage(getActiveStorageKey(), JSON.stringify(state));
           await syncLocalPcSilent();
           renderAll();
         } else {
@@ -2008,6 +2199,7 @@
       const topic = getMqttTopic();
       const compactState = {
         partners: state.partners,
+        profileName: state.profileName || undefined,
         updatedAt: state.updatedAt || Date.now(),
         deletedIds: state.deletedIds || [],
         customMonthlyBudget: state.customMonthlyBudget,
@@ -2038,7 +2230,7 @@
     });
 
     async function syncLocalPcSilent() {
-      if (!isLocalPcHost()) return;
+      if (!isLocalPcHost() || activeProfileMode !== 'shared') return;
       try {
         const asciiSafeJson = JSON.stringify(state, null, 2).replace(/[\u007F-\uFFFF]/g, (chr) =>
           '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4)
@@ -2056,6 +2248,17 @@
       const dot = document.getElementById('dbDot');
       const sub = document.getElementById('dbStatusText');
       const timeSuffix = lastCloudSyncTimeStr ? ` (${lastCloudSyncTimeStr})` : '';
+      updateProfileSwitcherUI();
+      if (activeProfileMode === 'personal') {
+        if (cloudConnected) {
+          dot.style.background = 'var(--purple)';
+          sub.textContent = `🔒 Perfil Privado Independiente • ☁️ En Vivo Solo Para Ti${timeSuffix}`;
+        } else {
+          dot.style.background = 'var(--purple)';
+          sub.textContent = `🔒 Perfil Privado Independiente • 📱 Solo en tu dispositivo`;
+        }
+        return;
+      }
       if (cloudConnected && pcConnected) {
         dot.style.background = 'var(--green)';
         sub.textContent = `${state.partners[0]} & ${state.partners[1]} • ☁️ En Vivo${timeSuffix} + 💻 PC`;
@@ -2072,17 +2275,21 @@
     }
 
     async function initState() {
-      // 1. Cargar datos guardados en el dispositivo
+      const activeKey = getActiveStorageKey();
+      // 1. Cargar datos guardados en el dispositivo para el perfil activo (Compartido o Privado)
       try {
-        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('finanzas_pareja_v3') || localStorage.getItem('finanzas_pareja_v2');
+        let raw = safeGetStorage(activeKey);
+        if (!raw && activeProfileMode === 'shared') {
+          raw = safeGetStorage('finanzas_pareja_v3') || safeGetStorage('finanzas_pareja_v2');
+        }
         if (raw) {
           const parsed = JSON.parse(raw);
           state = mergeStates(state, parsed);
         }
       } catch (e) {}
 
-      // 2. Si estamos en el PC local (localhost), cargar y unir con base-de-datos.json del PC
-      if (isLocalPcHost()) {
+      // 2. Si estamos en el PC local (localhost) y en perfil Compartido, cargar y unir con base-de-datos.json del PC
+      if (isLocalPcHost() && activeProfileMode === 'shared') {
         try {
           const res = await fetch('/api/state', { cache: 'no-store' });
           if (res.ok) {
@@ -2095,16 +2302,15 @@
 
       renderAll();
 
-      // 3. Conectar al canal cifrado en tiempo real (recibe estado retenido del otro celular y publica unión)
+      // 3. Conectar al canal cifrado en tiempo real (Compartido o Privado según el perfil activo)
       try {
         await ensureCloudConnected();
-        // Esperar brevemente para recibir y fusionar el estado retenido antes de republicar si hay datos locales
         await new Promise(r => setTimeout(r, 700));
         if (state.expenses.length > 0 || Object.keys(state.monthlyConfigs || {}).length > 0) {
           await pushToCloud();
         }
         await syncLocalPcSilent();
-        safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+        safeSetStorage(activeKey, JSON.stringify(state));
       } catch (e) {}
 
       renderAll();
@@ -2112,14 +2318,14 @@
 
     async function saveState(skipExcelWrite) {
       state.updatedAt = Date.now();
-      safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+      safeSetStorage(getActiveStorageKey(), JSON.stringify(state));
       renderAll();
 
-      // Guardar en PC local si está disponible
+      // Guardar en PC local si estamos en perfil Compartido
       await syncLocalPcSilent();
 
-      // Actualizar automáticamente el archivo Excel vinculado cuando se ingresan gastos o cambios en la app
-      if (!skipExcelWrite) {
+      // Actualizar automáticamente el archivo Excel vinculado cuando estamos en perfil Compartido
+      if (!skipExcelWrite && activeProfileMode === 'shared') {
         await writeLiveExcelFileSilent();
       }
 
@@ -2138,10 +2344,13 @@
         await new Promise(r => setTimeout(r, 750));
         await pushToCloud();
         await syncLocalPcSilent();
-        safeSetStorage(STORAGE_KEY, JSON.stringify(state));
+        safeSetStorage(getActiveStorageKey(), JSON.stringify(state));
         renderAll();
         if (showAlert) {
-          alert('☁️ ¡Sincronización cifrada en vivo completada! Ambos celulares ya están conectados y actualizados.');
+          const msg = activeProfileMode === 'personal'
+            ? '🔒 ¡Tu Perfil Privado se sincronizó de forma cifrada (solo visible con tu PIN personal)!'
+            : '☁️ ¡Sincronización cifrada en vivo completada! Ambos celulares ya están conectados y actualizados.';
+          alert(msg);
           closeModals();
         }
       } catch (err) {
@@ -2562,7 +2771,9 @@
 
       const payerSelect = document.getElementById('expPayer');
       const currentPayer = payerSelect.value;
-      const payers = [...state.partners, 'Ambos (50/50)'];
+      const payers = activeProfileMode === 'personal'
+        ? ['Yo (Personal)']
+        : [...state.partners, 'Ambos (50/50)'];
       payerSelect.innerHTML = payers.map(p => `<option value="${p}">${p}</option>`).join('');
       if (currentPayer && payers.includes(currentPayer)) {
         payerSelect.value = currentPayer;
@@ -2663,62 +2874,97 @@
         }).join('');
       }
 
-      // 2. RENDER BALANCES
-      let p1Paid = 0;
-      let p2Paid = 0;
-      monthExpenses.forEach(e => {
-        if (e.payer === state.partners[0]) p1Paid += e.amount;
-        else if (e.payer === state.partners[1]) p2Paid += e.amount;
-        else {
-          p1Paid += e.amount / 2;
-          p2Paid += e.amount / 2;
-        }
-      });
-
-      const fairShare = totalSpent / 2;
-      const p1Balance = p1Paid - fairShare;
-      const p2Balance = p2Paid - fairShare;
-
+      // 2. RENDER BALANCES (Pareja 50/50 en Compartido | Resumen Personal por Segmento en Perfil Privado)
       const headlineEl = document.getElementById('balanceHeadline');
       const sublineEl = document.getElementById('balanceSubline');
       const emojiEl = document.getElementById('balanceEmoji');
 
-      if (Math.abs(p1Balance) < 1) {
-        emojiEl.textContent = '🤝';
-        headlineEl.textContent = 'Están a paz y salvo';
-        sublineEl.textContent = `Ambos han aportado lo mismo en ${fmtMonthName(selectedMonth)}`;
-      } else if (p1Balance > 0) {
-        emojiEl.textContent = '🤑';
-        headlineEl.textContent = `${state.partners[1]} le debe ${fmtMoney(p1Balance)} a ${state.partners[0]}`;
-        sublineEl.textContent = `Para equilibrar los gastos 50/50 de ${fmtMonthName(selectedMonth)}`;
-      } else {
-        emojiEl.textContent = '💸';
-        headlineEl.textContent = `${state.partners[0]} le debe ${fmtMoney(Math.abs(p1Balance))} a ${state.partners[1]}`;
-        sublineEl.textContent = `Para equilibrar los gastos 50/50 de ${fmtMonthName(selectedMonth)}`;
-      }
+      if (activeProfileMode === 'personal') {
+        emojiEl.textContent = remaining >= 0 ? '🔐' : '⚠️';
+        headlineEl.textContent = remaining >= 0
+          ? `Tu saldo personal disponible: ${fmtMoney(remaining)}`
+          : `Excediste tu presupuesto personal por ${fmtMoney(Math.abs(remaining))}`;
+        sublineEl.textContent = `Gastos privados de ${fmtMonthName(selectedMonth)} (no visibles en Compartido)`;
 
-      document.getElementById('balancesList').innerHTML = [
-        { name: state.partners[0], paid: p1Paid, bal: p1Balance },
-        { name: state.partners[1], paid: p2Paid, bal: p2Balance }
-      ].map(p => {
-        const initial = (p.name[0] || 'P').toUpperCase();
-        const color = p.bal > 1 ? 'var(--green)' : (p.bal < -1 ? 'var(--red)' : 'var(--text-secondary)');
-        const sign = p.bal > 1 ? '+' : (p.bal < -1 ? '-' : '');
-        return `
-          <div class="tc-card">
-            <div class="tc-left">
-              <div class="tc-avatar">${initial}</div>
-              <div class="tc-info">
-                <div class="tc-title">${p.name}</div>
-                <div class="tc-sub">Pagó ${fmtMoney(p.paid)} en ${fmtMonthName(selectedMonth)}</div>
+        // Desglose personal por segmento
+        const personalSegTotals = {};
+        monthExpenses.forEach(e => {
+          const r = rubroMap[e.rubroId] || { segment: 'Personal', name: 'Otro' };
+          personalSegTotals[r.segment] = (personalSegTotals[r.segment] || 0) + Number(e.amount || 0);
+        });
+        const segEntries = Object.entries(personalSegTotals).sort((a, b) => b[1] - a[1]);
+        document.getElementById('balancesList').innerHTML = segEntries.length
+          ? segEntries.map(([seg, val]) => {
+              const pct = totalSpent > 0 ? Math.round((val / totalSpent) * 100) : 0;
+              return `
+                <div class="tc-card">
+                  <div class="tc-left">
+                    <div class="tc-icon">${getCategoryIcon(seg)}</div>
+                    <div class="tc-info">
+                      <div class="tc-title">${seg}</div>
+                      <div class="tc-sub">${pct}% de tus gastos privados del mes</div>
+                    </div>
+                  </div>
+                  <div class="tc-right">
+                    <div class="tc-amount" style="color:var(--purple);">${fmtMoney(val)}</div>
+                  </div>
+                </div>
+              `;
+            }).join('')
+          : `<div class="tc-card"><div class="tc-sub">Aún no has registrado gastos privados en ${fmtMonthName(selectedMonth)}.</div></div>`;
+      } else {
+        let p1Paid = 0;
+        let p2Paid = 0;
+        monthExpenses.forEach(e => {
+          if (e.payer === state.partners[0]) p1Paid += e.amount;
+          else if (e.payer === state.partners[1]) p2Paid += e.amount;
+          else {
+            p1Paid += e.amount / 2;
+            p2Paid += e.amount / 2;
+          }
+        });
+
+        const fairShare = totalSpent / 2;
+        const p1Balance = p1Paid - fairShare;
+        const p2Balance = p2Paid - fairShare;
+
+        if (Math.abs(p1Balance) < 1) {
+          emojiEl.textContent = '🤝';
+          headlineEl.textContent = 'Están a paz y salvo';
+          sublineEl.textContent = `Ambos han aportado lo mismo en ${fmtMonthName(selectedMonth)}`;
+        } else if (p1Balance > 0) {
+          emojiEl.textContent = '🤑';
+          headlineEl.textContent = `${state.partners[1]} le debe ${fmtMoney(p1Balance)} a ${state.partners[0]}`;
+          sublineEl.textContent = `Para equilibrar los gastos 50/50 de ${fmtMonthName(selectedMonth)}`;
+        } else {
+          emojiEl.textContent = '💸';
+          headlineEl.textContent = `${state.partners[0]} le debe ${fmtMoney(Math.abs(p1Balance))} a ${state.partners[1]}`;
+          sublineEl.textContent = `Para equilibrar los gastos 50/50 de ${fmtMonthName(selectedMonth)}`;
+        }
+
+        document.getElementById('balancesList').innerHTML = [
+          { name: state.partners[0], paid: p1Paid, bal: p1Balance },
+          { name: state.partners[1], paid: p2Paid, bal: p2Balance }
+        ].map(p => {
+          const initial = (p.name[0] || 'P').toUpperCase();
+          const color = p.bal > 1 ? 'var(--green)' : (p.bal < -1 ? 'var(--red)' : 'var(--text-secondary)');
+          const sign = p.bal > 1 ? '+' : (p.bal < -1 ? '-' : '');
+          return `
+            <div class="tc-card">
+              <div class="tc-left">
+                <div class="tc-avatar">${initial}</div>
+                <div class="tc-info">
+                  <div class="tc-title">${p.name}</div>
+                  <div class="tc-sub">Pagó ${fmtMoney(p.paid)} en ${fmtMonthName(selectedMonth)}</div>
+                </div>
+              </div>
+              <div class="tc-right">
+                <div class="tc-amount" style="color:${color};">${sign}${fmtMoney(Math.abs(p.bal))}</div>
               </div>
             </div>
-            <div class="tc-right">
-              <div class="tc-amount" style="color:${color};">${sign}${fmtMoney(Math.abs(p.bal))}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
+      }
 
       // 3. RENDER RUBROS GROUPED BY SEGMENT FOR THIS MONTH
       const segGroups = {};
@@ -2768,7 +3014,7 @@
                   <div class="tc-left">
                     <div class="tc-icon">${getCategoryIcon(r.name + ' ' + r.segment)}</div>
                     <div class="tc-info">
-                      <div class="tc-title">${r.name} ${isFixedRubro(r.name) ? '<span style="font-size:0.65rem;padding:0.1rem 0.42rem;border-radius:999px;background:rgba(48,209,88,0.16);color:var(--green);font-weight:700;margin-left:0.3rem;vertical-align:middle;">📌 Fijo</span>' : ''}</div>
+                      <div class="tc-title">${r.name} ${(activeProfileMode === 'shared' && isFixedRubro(r.name)) ? '<span style="font-size:0.65rem;padding:0.1rem 0.42rem;border-radius:999px;background:rgba(48,209,88,0.16);color:var(--green);font-weight:700;margin-left:0.3rem;vertical-align:middle;">📌 Fijo</span>' : ''}</div>
                       <div class="rubro-metrics-row">
                         <span class="rubro-metric-pill">Meta: <strong style="color:var(--text);">${fmtMoney(r.budget)}</strong></span>
                         <span class="rubro-metric-pill">Gastado: <strong style="color:var(--blue);">${fmtMoney(r.spent)}</strong></span>
@@ -3615,7 +3861,7 @@
     // 2) O desde un archivo vinculado directamente en el navegador
     setInterval(async () => {
       if (!isUnlocked) return;
-      if (isLocalPcHost()) {
+      if (isLocalPcHost() && activeProfileMode === 'shared') {
         try {
           const res = await fetch('/api/state', { cache: 'no-store' });
           if (res.ok) {
@@ -3635,7 +3881,7 @@
         } catch (e) {}
       }
 
-      if (!liveExcelFileHandle || isWritingExcel) return;
+      if (!liveExcelFileHandle || isWritingExcel || activeProfileMode !== 'shared') return;
       try {
         const file = await liveExcelFileHandle.getFile();
         if (file.lastModified > lastKnownExcelModified && lastKnownExcelModified > 0) {
@@ -3646,7 +3892,7 @@
       } catch (e) {}
     }, 2000);
 
-    // Flujo de desbloqueo privado con PIN / Clave Secreta
+    // Flujo de desbloqueo privado con PIN / Clave Secreta de Pareja
     async function unlockWithPin(pin, remember) {
       const cleanPin = String(pin || '').trim();
       const errEl = document.getElementById('pinErrorMsg');
@@ -3658,6 +3904,8 @@
         return;
       }
       if (errEl) errEl.style.display = 'none';
+      activeProfileMode = 'shared';
+      couplePin = cleanPin;
       activePin = cleanPin;
       isUnlocked = true;
       if (remember) {
@@ -3666,6 +3914,7 @@
         try { localStorage.removeItem(SAVED_PIN_KEY); } catch (e) {}
       }
       document.getElementById('pinLockScreen').classList.add('unlocked');
+      updateProfileSwitcherUI();
       await initState();
     }
 
@@ -3674,6 +3923,49 @@
       const pinVal = document.getElementById('pinInput').value;
       const remember = document.getElementById('rememberPinChk').checked;
       unlockWithPin(pinVal, remember);
+    });
+
+    // Flujo de acceso a Perfil Privado Personal (100% independiente y oculto para el otro usuario)
+    document.getElementById('personalPinForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pPin = String(document.getElementById('personalPinInput').value || '').trim();
+      const pName = String(document.getElementById('personalProfileNameInput').value || '').trim();
+      const errEl = document.getElementById('personalPinError');
+
+      if (pPin.length < 4) {
+        errEl.textContent = 'Tu PIN personal debe tener al menos 4 caracteres.';
+        errEl.style.display = 'block';
+        return;
+      }
+      if (pPin === couplePin) {
+        errEl.textContent = 'Por seguridad, usa un PIN personal distinto al PIN compartido de pareja.';
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
+      if (pName) {
+        personalProfileTitle = pName;
+        safeSetStorage('finanzas_personal_name_hint', pName);
+      }
+
+      closeModals();
+      if (typeof closeMqttClean === 'function') closeMqttClean();
+      activeProfileMode = 'personal';
+      activePin = pPin;
+      pcConnected = false;
+      cloudConnected = false;
+      state = {
+        partners: ['Yo (Personal)', 'Personal'],
+        profileName: pName || personalProfileTitle || 'Mis Finanzas Personales',
+        updatedAt: 0,
+        deletedIds: [],
+        rubros: deepClone(PERSONAL_DEFAULT_RUBROS),
+        customMonthlyBudget: null,
+        monthlyConfigs: {},
+        expenses: []
+      };
+      updateProfileSwitcherUI();
+      await initState();
     });
 
     (function bootWithPinCheck() {
